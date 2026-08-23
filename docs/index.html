@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Great Lakes Lighthouses - Download</title>
+  <meta name="description" content="Download the Great Lakes Lighthouses Android app for the Pico 2 W LED map." />
+  <meta property="og:title" content="Great Lakes Lighthouses" />
+  <meta property="og:description" content="Tap to download the Android app for the Great Lakes lighthouse LED map." />
+  <meta property="og:image" content="great_lakes_lighthouses_splash.png" />
+  <style>
+    :root {
+      --navy: #0B1F3A;
+      --amber: #E8A838;
+      --cream: #F4EBD0;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--cream);
+      background: var(--navy);
+    }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 1.25rem 1.25rem 2rem;
+      background:
+        linear-gradient(180deg, rgba(11, 31, 58, 0.05) 0%, rgba(11, 31, 58, 0.2) 55%, rgba(11, 31, 58, 0.88) 100%),
+        url("great_lakes_lighthouses_splash.png") center top / cover no-repeat;
+    }
+
+    main {
+      width: min(22rem, 100%);
+      text-align: center;
+    }
+
+    .download {
+      display: inline-block;
+      width: 100%;
+      padding: 0.95rem 1.25rem;
+      border-radius: 0.85rem;
+      background: linear-gradient(135deg, var(--amber), #b06a12);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 1.05rem;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .download:active { transform: scale(0.98); }
+
+    .hint {
+      margin: 0.85rem 0 0;
+      font-size: 0.8rem;
+      color: rgba(244, 235, 208, 0.75);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a
+      class="download"
+      href="https://github.com/doorcountydrone/GreatLakesLighthouses/releases/latest/download/GreatLakesLighthouses.apk"
+    >Download Great Lakes Lighthouses</a>
+    <p class="hint">After download, open the file and allow install from this source if asked.</p>
+  </main>
+</body>
+</html>
