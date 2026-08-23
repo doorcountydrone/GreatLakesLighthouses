@@ -1,0 +1,656 @@
+import gc
+import json
+import machine
+import neopixel
+import network
+import socket
+import utime as time
+
+try:
+    import urequests
+except ImportError:
+    import requests as urequests
+
+try:
+    import ntptime
+except ImportError:
+    ntptime = None
+
+FIRMWARE_VERSION = "0.4.0"
+CONFIG_FILE = "wifi_config.json"
+LIGHTHOUSE_FILE = "lighthouses.json"
+FORCE_AP_BUTTON_PIN = 15
+LED_PIN = 0
+NUM_LEDS = 13
+BRIGHTNESS = 0.18
+BEACON_PULSE = True
+CYCLE_DELAY = 300
+LDR_DRIVE_PIN = 21
+LDR_ADC_PIN = 26
+
+# Navigation-light colors (not METAR categories). White is warm lantern, not cool RGB white.
+LIGHT_RGB = {
+    "W": (255, 236, 180),
+    "R": (255, 12, 0),
+    "G": (0, 220, 70),
+}
+CATEGORY_COLOR = {
+    "VFR": (0, 255, 0),
+    "MVFR": (0, 0, 255),
+    "IFR": (255, 0, 0),
+    "LIFR": (255, 0, 128),
+    "": (255, 255, 255),
+}
+
+WX_FOG = ("FG", "BR", "FZFG", "HZ")
+WX_RAIN = ("-RA", "RA", "+RA", "-DZ", "DZ", "+DZ", "SHRA")
+WX_SNOW = ("-SN", "SN", "+SN", "SHSN", "-PE", "PE")
+WX_STORM = ("TS", "VCTS", "FC", "+FC", "TORNADO")
+WX_LTG = ("LTG", "DSNT", "CC", "CA", "CG")
+WX_WIND = ("WND",)
+
+lighthouses = []
+strip = None
+wlan = None
+http_sock = None
+status = {
+    "version": FIRMWARE_VERSION,
+    "ip": None,
+    "last_fetch": None,
+    "stations": {},
+}
+sleep_cfg = {
+    "sleep_enabled": False,
+    "sleep_at_hour": 22,
+    "sleep_at_minute": 0,
+    "wake_at_hour": 6,
+    "wake_at_minute": 0,
+    "timezone_offset_hours": -5,
+    "weekend_mode_enabled": False,
+    "weekend_off_weekday": 4,
+    "weekend_off_hour": 18,
+    "weekend_off_minute": 0,
+    "weekend_on_weekday": 0,
+    "weekend_on_hour": 6,
+    "weekend_on_minute": 0,
+}
+clock_trusted = False
+ldr_adc = None
+
+
+def _clamp(n, lo, hi):
+    return max(lo, min(hi, n))
+
+
+def load_config():
+    global LED_PIN, NUM_LEDS, BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            cfg = json.load(f)
+    except Exception:
+        cfg = {}
+    LED_PIN = _clamp(int(cfg.get("led_pin", 0)), 0, 28)
+    NUM_LEDS = _clamp(int(cfg.get("num_leds", 13)), 1, 300)
+    BRIGHTNESS = max(0.02, min(1.0, float(cfg.get("brightness", 0.18))))
+    BEACON_PULSE = bool(cfg.get("beacon_pulse", True))
+    CYCLE_DELAY = _clamp(int(cfg.get("cycle_delay", 300)), 30, 3600)
+    for k in sleep_cfg:
+        if k in cfg:
+            sleep_cfg[k] = cfg[k]
+    return cfg
+
+
+def force_ap_held():
+    pin = machine.Pin(FORCE_AP_BUTTON_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+    if pin.value() != 0:
+        return False
+    print("AP button held — wait 3s")
+    t0 = time.ticks_ms()
+    while pin.value() == 0:
+        if time.ticks_diff(time.ticks_ms(), t0) >= 3000:
+            return True
+        time.sleep_ms(20)
+    return False
+
+
+def connect_wifi(cfg):
+    global wlan
+    ssid = cfg.get("ssid")
+    password = cfg.get("password")
+    if not ssid:
+        return False
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        wlan.connect(ssid, password)
+        for _ in range(20):
+            if wlan.isconnected():
+                break
+            time.sleep(1)
+    if wlan.isconnected():
+        status["ip"] = wlan.ifconfig()[0]
+        print("WiFi", status["ip"])
+        return True
+    return False
+
+
+def load_lighthouses():
+    global lighthouses
+    with open(LIGHTHOUSE_FILE, "r") as f:
+        data = json.load(f)
+    items = data.get("lighthouses", [])
+    items.sort(key=lambda x: int(x.get("led", 0)))
+    lighthouses = items
+    print("Loaded", len(lighthouses), "lighthouses")
+
+
+def init_strip():
+    global strip
+    strip = neopixel.NeoPixel(machine.Pin(LED_PIN), NUM_LEDS)
+    for i in range(NUM_LEDS):
+        strip[i] = (0, 0, 0)
+    strip.write()
+    print("Strip GPIO", LED_PIN, "x", NUM_LEDS)
+
+
+def scale_color(rgb, brightness=None):
+    if brightness is None:
+        brightness = BRIGHTNESS
+    if ldr_adc is not None:
+        try:
+            raw = ldr_adc.read_u16()
+            # Darker room -> dimmer map (rough)
+            ambient = 1.0 - (raw / 65535.0)
+            brightness = max(0.04, min(BRIGHTNESS, 0.05 + ambient * BRIGHTNESS))
+        except Exception:
+            pass
+    r, g, b = rgb
+    return (
+        _clamp(int(r * brightness), 0, 255),
+        _clamp(int(g * brightness), 0, 255),
+        _clamp(int(b * brightness), 0, 255),
+    )
+
+
+def paint_all(rgb):
+    c = scale_color(rgb)
+    for i in range(NUM_LEDS):
+        strip[i] = c
+    strip.write()
+
+
+def startup_chase():
+    count = min(NUM_LEDS, max(1, len(lighthouses)))
+    for i in range(count):
+        for j in range(NUM_LEDS):
+            strip[j] = (0, 0, 0)
+        lh = lighthouses[i] if i < len(lighthouses) else None
+        color = light_color(lh) if lh else (255, 180, 60)
+        strip[i] = scale_color(color, 0.28)
+        strip.write()
+        time.sleep_ms(160)
+    paint_all((0, 0, 0))
+
+
+def unique_stations():
+    ids = []
+    for lh in lighthouses:
+        sid = str(lh.get("metar", "")).strip().upper()
+        fb = str(lh.get("metar_fallback", "KSUE")).strip().upper()
+        if sid and sid not in ids:
+            ids.append(sid)
+        if fb and fb not in ids:
+            ids.append(fb)
+    return ids
+
+
+def _parse_flight_category(raw_text):
+    if not raw_text:
+        return ""
+    raw = raw_text.strip().upper()
+    vis_m = 10.0
+    ceiling_ft = 10000
+    i = raw.find("SM")
+    if i > 0:
+        start = i
+        while start > 0 and (raw[start - 1].isdigit() or raw[start - 1] in "/.M "):
+            start -= 1
+        tok = raw[start:i].strip()
+        if tok.startswith("P") or tok.startswith("M"):
+            tok = tok[1:]
+        try:
+            if "/" in tok:
+                if " " in tok:
+                    parts = tok.split()
+                    whole = int(parts[0]) if parts[0].isdigit() else 0
+                    a, b = parts[1].split("/", 1)
+                    vis_m = whole + int(a) / max(1, int(b))
+                else:
+                    a, b = tok.split("/", 1)
+                    vis_m = int(a) / max(1, int(b))
+            else:
+                vis_m = float(tok)
+        except Exception:
+            pass
+    for prefix in ("BKN", "OVC", "VV"):
+        idx = 0
+        while True:
+            idx = raw.find(prefix, idx)
+            if idx < 0:
+                break
+            idx += len(prefix)
+            if idx + 3 <= len(raw) and raw[idx:idx + 3].isdigit():
+                h = int(raw[idx:idx + 3]) * 100
+                if h < ceiling_ft:
+                    ceiling_ft = h
+            idx += 1
+    if ceiling_ft < 500 or vis_m < 1.0:
+        return "LIFR"
+    if ceiling_ft < 1000 or vis_m < 3.0:
+        return "IFR"
+    if ceiling_ft < 3000 or vis_m < 5.0:
+        return "MVFR"
+    return "VFR"
+
+
+def wx_bits(raw_text):
+    bits = 0
+    if not raw_text:
+        return 0
+    for tok in raw_text.upper().split():
+        if tok in WX_FOG:
+            bits |= 1
+        elif tok in WX_RAIN:
+            bits |= 2
+        elif tok in WX_SNOW:
+            bits |= 4
+        elif tok in WX_STORM or tok in WX_LTG:
+            bits |= 8
+        elif tok in WX_WIND:
+            bits |= 16
+    return bits
+
+
+def fetch_metars():
+    ids = unique_stations()
+    if not ids:
+        return
+    url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=1&format=raw" % ",".join(ids)
+    print("Fetch", url)
+    try:
+        gc.collect()
+        resp = urequests.get(url, timeout=12)
+        text = resp.text
+        resp.close()
+        gc.collect()
+    except Exception as e:
+        print("METAR fetch failed:", e)
+        return
+    found = {}
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line or not (line.startswith("METAR ") or line.startswith("SPECI ")):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        station = parts[1].upper()
+        found[station] = {
+            "category": _parse_flight_category(line) or "VFR",
+            "raw": line,
+            "wx": wx_bits(line),
+        }
+    status["stations"] = found
+    status["last_fetch"] = time.time()
+    print("Got", len(found), "stations", list(found.keys()))
+
+
+def station_for(lh):
+    stations = status.get("stations") or {}
+    primary = str(lh.get("metar", "")).strip().upper()
+    fallback = str(lh.get("metar_fallback", "KSUE")).strip().upper()
+    if primary in stations:
+        return stations[primary]
+    if fallback in stations:
+        return stations[fallback]
+    return None
+
+
+def local_parts():
+    """Local weekday (0=Mon), hour, minute using timezone_offset_hours from UTC."""
+    t = time.gmtime(time.time() + int(sleep_cfg.get("timezone_offset_hours", -5)) * 3600)
+    return t[6], t[3], t[4]
+
+
+def _in_daily_sleep(hour, minute):
+    if not sleep_cfg.get("sleep_enabled"):
+        return False
+    sh = int(sleep_cfg.get("sleep_at_hour", 22))
+    sm = int(sleep_cfg.get("sleep_at_minute", 0))
+    wh = int(sleep_cfg.get("wake_at_hour", 6))
+    wm = int(sleep_cfg.get("wake_at_minute", 0))
+    now = hour * 60 + minute
+    sleep_at = sh * 60 + sm
+    wake_at = wh * 60 + wm
+    if sleep_at == wake_at:
+        return False
+    if sleep_at < wake_at:
+        return sleep_at <= now < wake_at
+    return now >= sleep_at or now < wake_at
+
+
+def _week_minutes(wd, hour, minute):
+    return int(wd) * 1440 + int(hour) * 60 + int(minute)
+
+
+def _in_weekend(weekday, hour, minute):
+    if not sleep_cfg.get("weekend_mode_enabled"):
+        return False
+    start = _week_minutes(
+        sleep_cfg.get("weekend_off_weekday", 4),
+        sleep_cfg.get("weekend_off_hour", 18),
+        sleep_cfg.get("weekend_off_minute", 0),
+    )
+    end = _week_minutes(
+        sleep_cfg.get("weekend_on_weekday", 0),
+        sleep_cfg.get("weekend_on_hour", 6),
+        sleep_cfg.get("weekend_on_minute", 0),
+    )
+    cur = _week_minutes(weekday, hour, minute)
+    if start < end:
+        return start <= cur < end
+    if start > end:
+        return cur >= start or cur < end
+    return False
+
+
+def in_sleep_window():
+    if not clock_trusted:
+        return False
+    wd, h, m = local_parts()
+    return _in_weekend(wd, h, m) or _in_daily_sleep(h, m)
+
+
+def sync_ntp():
+    global clock_trusted
+    if ntptime is None:
+        return
+    try:
+        ntptime.settime()
+        clock_trusted = True
+        print("NTP ok")
+    except Exception as e:
+        print("NTP failed:", e)
+
+
+def light_spec(lh):
+    spec = lh.get("light")
+    return spec if isinstance(spec, dict) else {}
+
+
+def light_color(lh):
+    code = str(light_spec(lh).get("color", "W")).upper()
+    return LIGHT_RGB.get(code, LIGHT_RGB["W"])
+
+
+def characteristic_on(lh, now_ms):
+    """True when this aid would be lit, using on_s/off_s pairs that fill period_s."""
+    spec = light_spec(lh)
+    if not spec:
+        return True
+    on_s = spec.get("on_s") or [1.0]
+    off_s = spec.get("off_s") or [0.0]
+    period_s = float(spec.get("period_s") or 0)
+    if period_s <= 0:
+        period_s = 0
+        n = max(len(on_s), len(off_s))
+        for i in range(n):
+            period_s += float(on_s[i] if i < len(on_s) else 0)
+            period_s += float(off_s[i] if i < len(off_s) else 0)
+    if period_s <= 0:
+        return True
+    # Fixed light: no eclipse
+    if len(off_s) == 1 and float(off_s[0]) <= 0 and len(on_s) == 1:
+        return True
+    t = (now_ms % int(period_s * 1000)) / 1000.0
+    cursor = 0.0
+    n = max(len(on_s), len(off_s))
+    for i in range(n):
+        on = float(on_s[i] if i < len(on_s) else 0)
+        if t < cursor + on:
+            return on > 0
+        cursor += on
+        off = float(off_s[i] if i < len(off_s) else 0)
+        if t < cursor + off:
+            return False
+        cursor += off
+    return False
+
+
+def render_frame():
+    if in_sleep_window():
+        paint_all((0, 0, 0))
+        return
+    now_ms = time.ticks_ms()
+    used = {}
+    for lh in lighthouses:
+        led_i = int(lh.get("led", 0))
+        if led_i < 0 or led_i >= NUM_LEDS:
+            continue
+        if lh.get("skip"):
+            strip[led_i] = (0, 0, 0)
+            used[led_i] = True
+            continue
+        if characteristic_on(lh, now_ms):
+            strip[led_i] = scale_color(light_color(lh))
+        else:
+            strip[led_i] = (0, 0, 0)
+        used[led_i] = True
+    for i in range(NUM_LEDS):
+        if i not in used:
+            strip[i] = (0, 0, 0)
+    strip.write()
+
+
+def start_http():
+    global http_sock
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("0.0.0.0", 80))
+    s.listen(2)
+    s.settimeout(0.02)
+    http_sock = s
+    print("HTTP status on port 80")
+
+
+def lighthouse_payload():
+    return list(lighthouses)
+
+
+def apply_lighthouse_list(items):
+    global lighthouses, NUM_LEDS
+    if not isinstance(items, list):
+        return 0
+    cleaned = []
+    for i, raw in enumerate(items):
+        if not isinstance(raw, dict):
+            continue
+        entry = dict(raw)
+        entry["led"] = i
+        cleaned.append(entry)
+    with open(LIGHTHOUSE_FILE, "w") as f:
+        json.dump({"version": 3, "order": "list", "lighthouses": cleaned})
+    lighthouses = cleaned
+    n = max(1, len(cleaned))
+    if n != NUM_LEDS:
+        NUM_LEDS = n
+        init_strip()
+        try:
+            cfg = load_config()
+            cfg["num_leds"] = n
+            with open(CONFIG_FILE, "w") as cf:
+                json.dump(cfg)
+        except Exception as e:
+            print("num_leds save:", e)
+    print("Saved", len(cleaned), "lighthouses")
+    return len(cleaned)
+
+
+def read_http(conn):
+    conn.settimeout(2)
+    data = b""
+    while b"\r\n\r\n" not in data:
+        chunk = conn.recv(1024)
+        if not chunk:
+            break
+        data += chunk
+        if len(data) > 16384:
+            break
+    if b"\r\n\r\n" not in data:
+        return data.decode(), ""
+    header, body = data.split(b"\r\n\r\n", 1)
+    clen = 0
+    for line in header.split(b"\r\n"):
+        if line.lower().startswith(b"content-length:"):
+            try:
+                clen = int(line.split(b":", 1)[1].strip())
+            except Exception:
+                clen = 0
+    while len(body) < clen:
+        more = conn.recv(1024)
+        if not more:
+            break
+        body += more
+    try:
+        return header.decode(), body.decode()
+    except Exception:
+        return "", ""
+
+
+def handle_http():
+    if http_sock is None:
+        return
+    try:
+        conn, _addr = http_sock.accept()
+    except OSError:
+        return
+    try:
+        header, req_body = read_http(conn)
+        line = header.split("\r\n", 1)[0] if header else ""
+        if line.startswith("GET /lighthouses"):
+            body = json.dumps({"ok": True, "lighthouses": lighthouse_payload()})
+        elif line.startswith("POST /lighthouses"):
+            try:
+                payload = json.loads(req_body) if req_body else {}
+                items = payload.get("lighthouses") if isinstance(payload, dict) else payload
+                count = apply_lighthouse_list(items)
+                body = json.dumps({"ok": True, "count": count, "message": "saved"})
+            except Exception as e:
+                body = json.dumps({"ok": False, "message": str(e)})
+        elif line.startswith("GET /status"):
+            body = json.dumps({
+                "ok": True,
+                "name": "GreatLakesLighthouses",
+                "version": FIRMWARE_VERSION,
+                "ip": status.get("ip"),
+                "last_fetch": status.get("last_fetch"),
+                "stations": list((status.get("stations") or {}).keys()),
+                "lights": len(lighthouses),
+            })
+        elif line.startswith("GET /config"):
+            import wifi_manager
+            out = wifi_manager.merge_defaults(load_config())
+            out.pop("password", None)
+            out["ok"] = True
+            out["version"] = FIRMWARE_VERSION
+            out["name"] = "GreatLakesLighthouses"
+            body = json.dumps(out)
+        elif line.startswith("POST /update-config") or line.startswith("POST /configure"):
+            try:
+                payload = json.loads(req_body) if req_body else {}
+                if not isinstance(payload, dict):
+                    raise ValueError("object required")
+                import wifi_manager
+                old_pin = LED_PIN
+                cfg = wifi_manager.merge_defaults(load_config())
+                wifi_manager.apply_fields(cfg, payload)
+                wifi_manager.save_config(cfg)
+                load_config()
+                if LED_PIN != old_pin:
+                    init_strip()
+                reboot = str(payload.get("reboot", "")).lower() in ("1", "true", "yes")
+                body = json.dumps({"ok": True, "message": "saved", "version": FIRMWARE_VERSION})
+                if reboot:
+                    hdr = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n" % len(body)
+                    conn.send(hdr.encode() + body.encode())
+                    conn.close()
+                    time.sleep(1)
+                    machine.reset()
+                    return
+            except Exception as e:
+                body = json.dumps({"ok": False, "message": str(e)})
+        elif line.startswith("POST /reboot"):
+            body = json.dumps({"ok": True, "message": "rebooting"})
+            hdr = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body)
+            conn.send(hdr.encode() + body.encode())
+            conn.close()
+            time.sleep(1)
+            machine.reset()
+            return
+        else:
+            body = json.dumps({"ok": True, "see": ["/status", "/lighthouses", "/config"]})
+        hdr = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n" % len(body)
+        conn.send(hdr.encode() + body.encode())
+    except Exception as e:
+        print("HTTP", e)
+    try:
+        conn.close()
+    except Exception:
+        pass
+
+
+def init_ldr():
+    global ldr_adc
+    try:
+        machine.Pin(LDR_DRIVE_PIN, machine.Pin.OUT).value(1)
+        ldr_adc = machine.ADC(machine.Pin(LDR_ADC_PIN))
+        print("LDR on GPIO", LDR_ADC_PIN)
+    except Exception as e:
+        ldr_adc = None
+        print("LDR skipped:", e)
+
+
+def main():
+    print("Great Lakes Lighthouses", FIRMWARE_VERSION)
+    cfg = load_config()
+    held = force_ap_held()
+    if held or not cfg.get("ssid"):
+        import wifi_manager
+        wifi_manager.start(force_ap=held or not cfg.get("ssid"))
+        return
+    if not connect_wifi(cfg):
+        import wifi_manager
+        wifi_manager.start(force_ap=True)
+        return
+    init_strip()
+    load_lighthouses()
+    init_ldr()
+    startup_chase()
+    paint_all((40, 30, 0))
+    sync_ntp()
+    fetch_metars()
+    start_http()
+    last_fetch = time.time()
+    while True:
+        handle_http()
+        now = time.time()
+        if now - last_fetch >= CYCLE_DELAY:
+            if not in_sleep_window():
+                fetch_metars()
+            last_fetch = now
+            gc.collect()
+        render_frame()
+        time.sleep_ms(20)
+
+
+main()

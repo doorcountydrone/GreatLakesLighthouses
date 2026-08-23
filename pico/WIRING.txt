@@ -1,0 +1,48 @@
+Great Lakes Lighthouses — Pico 2 W wiring
+============================================
+
+Power
+-----
+- Pico 2 W: USB or 5 V on VSYS (with a diode / proper supply).
+- WS2812 / NeoPixel strip: 5 V sized for LED count. 13 LEDs is easy from USB;
+  a long map strip needs its own 5 V supply.
+- Common GND between Pico and LED strip is required.
+
+Default pins (same layout as MetarMap)
+--------------------------------------
+  Function              GPIO
+  Strip data            0
+  Force setup AP        15  (momentary button to GND; hold ~3 s at boot)
+  LDR drive (optional)  21  (output high)
+  LDR read (optional)   26  (ADC0); 10 kΩ to GND on the ADC side
+
+LED order (south → north)
+-------------------------
+  0  Kewaunee Pierhead
+  1  Algoma Pierhead
+  2  Sturgeon Bay Ship Canal Light
+  3  Sturgeon Bay North Pierhead
+  4  Sherwood Point
+  5  Eagle Bluff
+  6  Chambers Island
+  7  Baileys Harbor Range Lights
+  8  Old Baileys Harbor (Birdcage)
+  9  Cana Island
+ 10  Plum Island Range Lights
+ 11  Pilot Island
+ 12  Pottawatomie (Rock Island)
+
+If your physical strip is longer, extra LEDs stay off. Set num_leds in setup
+to the number of WS2812 chips on the wire.
+
+Colors and flash (real characteristics)
+---------------------------------------
+  White  W   Canal-style lantern white
+  Red    R   navigation red (pierhead, canal, ranges)
+
+  Fl     flashing (short on, longer off)
+  Iso    isophase (equal on and off)
+  F      fixed (steady)
+  Fl(2)  group of two flashes in one period
+
+See README.md for each LED's official characteristic.

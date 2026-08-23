@@ -1,0 +1,280 @@
+{
+  "version": 3,
+  "order": "south_to_north",
+  "notes": "LED 0 is southernmost (Kewaunee). Each light.char is the USCG / historic characteristic the Pico plays. Keep in sync with app/src/main/assets/lighthouses.json.",
+  "lighthouses": [
+    {
+      "id": "kewaunee",
+      "name": "Kewaunee Pierhead Lighthouse",
+      "short_name": "Kewaunee",
+      "led": 0,
+      "lat": 44.4574,
+      "lon": -87.4929,
+      "metar": "KMTW",
+      "metar_fallback": "KSUE",
+      "metar_name": "Manitowoc",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [1.0],
+        "off_s": [0.0],
+        "source": "USCG 7-20955 — fixed white (Vega LED, 2019)"
+      }
+    },
+    {
+      "id": "algoma",
+      "name": "Algoma Pierhead Lighthouse",
+      "short_name": "Algoma",
+      "led": 1,
+      "lat": 44.6070,
+      "lon": -87.4293,
+      "metar": "KSUE",
+      "metar_fallback": "KMTW",
+      "metar_name": "Door County Cherryland",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "Iso R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [3.0],
+        "off_s": [3.0],
+        "source": "USCG 7-20975 — isophase red 6s"
+      }
+    },
+    {
+      "id": "canal",
+      "name": "Sturgeon Bay Ship Canal Light",
+      "short_name": "Canal Light",
+      "led": 2,
+      "lat": 44.7953,
+      "lon": -87.3136,
+      "metar": "KSUE",
+      "metar_fallback": "KSUE",
+      "metar_name": "Door County Cherryland",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "Fl R 10s",
+        "color": "R",
+        "period_s": 10.0,
+        "on_s": [1.0],
+        "off_s": [9.0],
+        "source": "USCG 7-20995 / current Canal Station Light"
+      }
+    },
+    {
+      "id": "pierhead",
+      "name": "Sturgeon Bay Ship Canal North Pierhead",
+      "short_name": "Pierhead",
+      "led": 3,
+      "lat": 44.7953,
+      "lon": -87.3069,
+      "metar": "KSUE",
+      "metar_fallback": "KSUE",
+      "metar_name": "Door County Cherryland",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "Fl R 2.5s",
+        "color": "R",
+        "period_s": 2.5,
+        "on_s": [0.5],
+        "off_s": [2.0],
+        "source": "USCG 7-21005"
+      }
+    },
+    {
+      "id": "sherwood",
+      "name": "Sherwood Point Lighthouse",
+      "short_name": "Sherwood Point",
+      "led": 4,
+      "lat": 44.8925,
+      "lon": -87.4333,
+      "metar": "KSUE",
+      "metar_fallback": "KSUE",
+      "metar_name": "Door County Cherryland",
+      "water": "Green Bay",
+      "active": true,
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [3.0],
+        "off_s": [3.0],
+        "source": "USCG Light List — isophase white 6s"
+      }
+    },
+    {
+      "id": "eagle_bluff",
+      "name": "Eagle Bluff Lighthouse",
+      "short_name": "Eagle Bluff",
+      "led": 5,
+      "lat": 45.1686,
+      "lon": -87.2367,
+      "metar": "3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim-Gibraltar",
+      "water": "Green Bay",
+      "active": true,
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [1.0],
+        "off_s": [5.0],
+        "source": "USCG / local: 1s flash, 5s eclipse"
+      }
+    },
+    {
+      "id": "chambers",
+      "name": "Chambers Island Lighthouse",
+      "short_name": "Chambers Island",
+      "led": 6,
+      "lat": 45.2019,
+      "lon": -87.3647,
+      "metar": "3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim-Gibraltar",
+      "water": "Green Bay",
+      "active": true,
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [1.0],
+        "off_s": [5.0],
+        "source": "Current ATON (skeletal tower USCG 7-21895). Historic brick tower dark since 1961."
+      }
+    },
+    {
+      "id": "baileys_range",
+      "name": "Baileys Harbor Range Lights",
+      "short_name": "Baileys Range",
+      "led": 7,
+      "lat": 45.0703,
+      "lon": -87.1194,
+      "metar": "3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim-Gibraltar",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [1.0],
+        "off_s": [0.0],
+        "source": "Front range (returned to service 2015). Rear range is fixed white; one LED shows the red front light."
+      }
+    },
+    {
+      "id": "birdcage",
+      "name": "Old Baileys Harbor Lighthouse (Birdcage)",
+      "short_name": "Birdcage",
+      "led": 8,
+      "lat": 45.0675,
+      "lon": -87.0975,
+      "metar": "3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim-Gibraltar",
+      "water": "Lake Michigan",
+      "active": false,
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [1.0],
+        "off_s": [0.0],
+        "source": "Historic 1852–1869 characteristic (fixed white birdcage lantern). Not an active ATON."
+      }
+    },
+    {
+      "id": "cana",
+      "name": "Cana Island Lighthouse",
+      "short_name": "Cana Island",
+      "led": 9,
+      "lat": 45.0881,
+      "lon": -87.0478,
+      "metar": "3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim-Gibraltar",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [1.0],
+        "off_s": [0.0],
+        "source": "USCG — fixed white (third-order Fresnel)"
+      }
+    },
+    {
+      "id": "plum",
+      "name": "Plum Island Range Lights",
+      "short_name": "Plum Island",
+      "led": 10,
+      "lat": 45.3078,
+      "lon": -86.9569,
+      "metar": "2P2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Washington Island",
+      "water": "Death's Door",
+      "active": true,
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [1.0],
+        "off_s": [0.0],
+        "source": "Front and rear range are both fixed red. One LED shows F R."
+      }
+    },
+    {
+      "id": "pilot",
+      "name": "Pilot Island Lighthouse",
+      "short_name": "Pilot Island",
+      "led": 11,
+      "lat": 45.2842,
+      "lon": -86.9197,
+      "metar": "2P2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Washington Island",
+      "water": "Death's Door",
+      "active": true,
+      "light": {
+        "char": "Fl(2) W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [1.0, 1.0],
+        "off_s": [1.0, 3.0],
+        "source": "USCG 7-21325 — fl 1s, ec 1s, fl 1s, ec 3s"
+      }
+    },
+    {
+      "id": "pottawatomie",
+      "name": "Pottawatomie Lighthouse (Rock Island)",
+      "short_name": "Pottawatomie",
+      "led": 12,
+      "lat": 45.4278,
+      "lon": -86.8214,
+      "metar": "2P2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Washington Island",
+      "water": "Lake Michigan",
+      "active": true,
+      "light": {
+        "char": "Fl W 4s",
+        "color": "W",
+        "period_s": 4.0,
+        "on_s": [0.5],
+        "off_s": [3.5],
+        "source": "Current ATON (skeletal tower). Historic 1858 house dark since 1988."
+      }
+    }
+  ]
+}

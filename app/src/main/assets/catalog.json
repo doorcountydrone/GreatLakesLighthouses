@@ -1,0 +1,2175 @@
+{
+  "version": 1,
+  "area": "Lake Michigan and adjoining waters (Green Bay, Straits approaches)",
+  "notes": "Search catalog in the app, then add lights to your LED list. Not all entries are on the strip.",
+  "count": 103,
+  "lighthouses": [
+    {
+      "id": "indiana_harbor_east_breakwater_light_416808_874411",
+      "name": "Indiana Harbor East Breakwater Light",
+      "short_name": "Indiana Harbor East Breakwater",
+      "lat": 41.6808,
+      "lon": -87.4411,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-19675",
+      "light": {
+        "char": "Iso G 6s",
+        "color": "G",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "old_michigan_city_light_417227_869058",
+      "name": "Old Michigan City Light",
+      "short_name": "Old Michigan City",
+      "lat": 41.72278,
+      "lon": -86.90583,
+      "region": "Indiana / Chicago",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "michigan_city_east_light_417288_869116",
+      "name": "Michigan City East Light",
+      "short_name": "Michigan City East",
+      "lat": 41.72889,
+      "lon": -86.91167,
+      "region": "Indiana / Chicago",
+      "llnr": "7-19545",
+      "light": {
+        "char": "Oc W 4s",
+        "color": "W",
+        "period_s": 4.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          1.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "michigan_city_breakwater_light_417299_869138",
+      "name": "Michigan City Breakwater Light",
+      "short_name": "Michigan City Breakwater",
+      "lat": 41.73,
+      "lon": -86.91389,
+      "region": "Indiana / Chicago",
+      "llnr": "7-19555",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "68th_street_crib_light_417863_875313",
+      "name": "68th Street Crib Light",
+      "short_name": "68th Street Crib",
+      "lat": 41.78639,
+      "lon": -87.53139,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-19870",
+      "light": {
+        "char": "Fl R 3s",
+        "color": "R",
+        "period_s": 3.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          2.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "four_mile_crib_light_418733_875450",
+      "name": "Four Mile Crib Light",
+      "short_name": "Four Mile Crib",
+      "lat": 41.87333,
+      "lon": -87.545,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-19925",
+      "light": {
+        "char": "Fl W 5s",
+        "color": "W",
+        "period_s": 5.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "chicago_harbor_southeast_guidewall_light_418883_876025",
+      "name": "Chicago Harbor Southeast Guidewall Light",
+      "short_name": "Chicago Harbor Southeast Guidewall",
+      "lat": 41.88833,
+      "lon": -87.6025,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20000",
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "chicago_harbor_light_418894_875905",
+      "name": "Chicago Harbor Light",
+      "short_name": "Chicago Harbor",
+      "lat": 41.88944,
+      "lon": -87.59056,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-19960",
+      "light": {
+        "char": "Fl R 5s",
+        "color": "R",
+        "period_s": 5.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "william_e_dever_crib_light_419294_875988",
+      "name": "William E. Dever Crib Light",
+      "short_name": "William E. Dever Crib",
+      "lat": 41.92944,
+      "lon": -87.59889,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20040",
+      "light": {
+        "char": "Q W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          0.3
+        ],
+        "off_s": [
+          0.7
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "wilson_avenue_crib_light_419661_875911",
+      "name": "Wilson Avenue Crib Light",
+      "short_name": "Wilson Avenue Crib",
+      "lat": 41.96611,
+      "lon": -87.59111,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20135",
+      "light": {
+        "char": "Q W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          0.3
+        ],
+        "off_s": [
+          0.7
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grosse_point_light_420638_876761",
+      "name": "Grosse Point Light",
+      "short_name": "Grosse Point",
+      "lat": 42.06389,
+      "lon": -87.67611,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20190",
+      "light": {
+        "char": "Fl(2) W 15s",
+        "color": "W",
+        "period_s": 15.0,
+        "on_s": [
+          0.5,
+          0.5
+        ],
+        "off_s": [
+          1.0,
+          13.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "st_joseph_north_pier_inner_light_421161_864936",
+      "name": "St. Joseph North Pier Inner Light",
+      "short_name": "St. Joseph North Pier Inner",
+      "lat": 42.11611,
+      "lon": -86.49361,
+      "region": "Michigan",
+      "llnr": "7-19520",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "st_joseph_north_pier_outer_light_421163_864947",
+      "name": "St. Joseph North Pier Outer Light",
+      "short_name": "St. Joseph North Pier Outer",
+      "lat": 42.11639,
+      "lon": -86.49472,
+      "region": "Michigan",
+      "llnr": "7-19515",
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "waukegan_harbor_light_423607_878134",
+      "name": "Waukegan Harbor Light",
+      "short_name": "Waukegan Harbor",
+      "lat": 42.3607,
+      "lon": -87.8134,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20315",
+      "light": {
+        "char": "Oc G 4s",
+        "color": "G",
+        "period_s": 4.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          1.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "south_haven_light_424013_862880",
+      "name": "South Haven Light",
+      "short_name": "South Haven",
+      "lat": 42.40139,
+      "lon": -86.28806,
+      "region": "Michigan",
+      "llnr": "7-19505",
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "kenosha_north_pier_light_425888_878086",
+      "name": "Kenosha North Pier Light",
+      "short_name": "Kenosha North Pier",
+      "lat": 42.5888,
+      "lon": -87.8086,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20415",
+      "light": {
+        "char": "Iso R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "kenosha_light_425894_878158",
+      "name": "Kenosha Light",
+      "short_name": "Kenosha",
+      "lat": 42.5894,
+      "lon": -87.8158,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20415",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "saugatuck_harbour_lighthouse_426769_862158",
+      "name": "Saugatuck Harbour lighthouse",
+      "short_name": "Saugatuck Harbour lighthouse",
+      "lat": 42.67694,
+      "lon": -86.21583,
+      "region": "Michigan",
+      "llnr": "7-19450",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "saugatuck_harbor_lights_426833_862166",
+      "name": "Saugatuck Harbor Lights",
+      "short_name": "Saugatuck Harbors",
+      "lat": 42.68333,
+      "lon": -86.21667,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "racine_reef_light_427275_877361",
+      "name": "Racine Reef Light",
+      "short_name": "Racine Reef",
+      "lat": 42.72755,
+      "lon": -87.73612,
+      "region": "Wisconsin / Illinois",
+      "llnr": "2-20480",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "racine_harbor_lighthouse_and_life_saving_station_427340_877787",
+      "name": "Racine Harbor Lighthouse and Life Saving Station",
+      "short_name": "Racine Harborhouse and Life Saving Station",
+      "lat": 42.73405,
+      "lon": -87.7787,
+      "region": "Wisconsin / Illinois",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "racine_north_breakwater_light_427346_877720",
+      "name": "Racine North Breakwater Light",
+      "short_name": "Racine North Breakwater",
+      "lat": 42.7346,
+      "lon": -87.772,
+      "region": "Wisconsin / Illinois",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "holland_harbor_light_427727_862124",
+      "name": "Holland Harbor Light",
+      "short_name": "Holland Harbor",
+      "lat": 42.7727,
+      "lon": -86.2124,
+      "region": "Michigan",
+      "llnr": "7-19295",
+      "light": {
+        "char": "Alt WR 10s",
+        "color": "W",
+        "period_s": 10.0,
+        "on_s": [
+          5.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "wind_point_light_427811_877583",
+      "name": "Wind Point Light",
+      "short_name": "Wind Point",
+      "lat": 42.78111,
+      "lon": -87.75833,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20605",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "milwaukee_pierhead_light_430260_878953",
+      "name": "Milwaukee Pierhead Light",
+      "short_name": "Milwaukee Pierhead",
+      "lat": 43.026,
+      "lon": -87.8953,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20670",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "milwaukee_breakwater_light_430270_878820",
+      "name": "Milwaukee Breakwater Light",
+      "short_name": "Milwaukee Breakwater",
+      "lat": 43.027,
+      "lon": -87.882,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20635",
+      "light": {
+        "char": "Fl R 10s",
+        "color": "R",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grand_haven_south_pierhead_entrance_light_430569_862558",
+      "name": "Grand Haven South Pierhead Entrance Light",
+      "short_name": "Grand Haven South Pierhead Entrance",
+      "lat": 43.05694,
+      "lon": -86.25583,
+      "region": "Michigan",
+      "llnr": "7-18965",
+      "light": {
+        "char": "Fl R 10s",
+        "color": "R",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grand_haven_south_pierhead_inner_light_430572_862538",
+      "name": "Grand Haven South Pierhead Inner Light",
+      "short_name": "Grand Haven South Pierhead Inner",
+      "lat": 43.05722,
+      "lon": -86.25389,
+      "region": "Michigan",
+      "llnr": "7-18975",
+      "light": {
+        "char": "Oc R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          1.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grand_haven_north_pierhead_light_430582_862560",
+      "name": "Grand Haven North Pierhead Light",
+      "short_name": "Grand Haven North Pierhead",
+      "lat": 43.05822,
+      "lon": -86.25606,
+      "region": "Michigan",
+      "llnr": "7-18980",
+      "light": {
+        "char": "Fl G 4s",
+        "color": "G",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "north_point_light_430656_878714",
+      "name": "North Point Light",
+      "short_name": "North Point",
+      "lat": 43.0656,
+      "lon": -87.8714,
+      "region": "Wisconsin / Illinois",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "muskegon_breakwater_light_432241_863471",
+      "name": "Muskegon Breakwater Light",
+      "short_name": "Muskegon Breakwater",
+      "lat": 43.2241,
+      "lon": -86.3471,
+      "region": "Michigan",
+      "llnr": "7-18705",
+      "light": {
+        "char": "Iso R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "muskegon_south_pierhead_light_432267_863415",
+      "name": "Muskegon South Pierhead Light",
+      "short_name": "Muskegon South Pierhead",
+      "lat": 43.2267,
+      "lon": -86.3415,
+      "region": "Michigan",
+      "llnr": "7-18710",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "kevich_light_433235_878884",
+      "name": "Kevich Light",
+      "short_name": "Kevich",
+      "lat": 43.3235,
+      "lon": -87.8885,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20765",
+      "light": {
+        "char": "Iso W 8s",
+        "color": "W",
+        "period_s": 8.0,
+        "on_s": [
+          4.0
+        ],
+        "off_s": [
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "white_river_light_433747_864243",
+      "name": "White River Light",
+      "short_name": "White River",
+      "lat": 43.3747,
+      "lon": -86.4243,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "Iso W 20s",
+        "color": "W",
+        "period_s": 20.0,
+        "on_s": [
+          10.0
+        ],
+        "off_s": [
+          10.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "port_washington_breakwater_light_433853_878597",
+      "name": "Port Washington Breakwater Light",
+      "short_name": "Port Washington Breakwater",
+      "lat": 43.3853,
+      "lon": -87.8597,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20770",
+      "light": {
+        "char": "Fl R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "port_washington_light_433910_878677",
+      "name": "Port Washington Light",
+      "short_name": "Port Washington",
+      "lat": 43.391,
+      "lon": -87.8677,
+      "region": "Wisconsin / Illinois",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "little_sable_point_light_436511_865391",
+      "name": "Little Sable Point Light",
+      "short_name": "Little Sable Point",
+      "lat": 43.65111,
+      "lon": -86.53917,
+      "region": "Michigan",
+      "llnr": "7-18645",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "sheboygan_breakwater_light_437494_876927",
+      "name": "Sheboygan Breakwater Light",
+      "short_name": "Sheboygan Breakwater",
+      "lat": 43.74944,
+      "lon": -87.69278,
+      "region": "Wisconsin / Illinois",
+      "llnr": "2-20820",
+      "light": {
+        "char": "Fl W 4s",
+        "color": "W",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "sheboygan_lighthouse_437630_876979",
+      "name": "Sheboygan Lighthouse",
+      "short_name": "Sheboyganhouse",
+      "lat": 43.763,
+      "lon": -87.698,
+      "region": "Wisconsin / Illinois",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "pentwater_light_437816_864441",
+      "name": "Pentwater Light",
+      "short_name": "Pentwater",
+      "lat": 43.78167,
+      "lon": -86.44417,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "pentwater_south_pierhead_light_437816_864441",
+      "name": "Pentwater South Pierhead Light",
+      "short_name": "Pentwater South Pierhead",
+      "lat": 43.78167,
+      "lon": -86.44417,
+      "region": "Michigan",
+      "llnr": "7-18630",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "pentwater_north_pierhead_light_437825_864438",
+      "name": "Pentwater North Pierhead Light",
+      "short_name": "Pentwater North Pierhead",
+      "lat": 43.7825,
+      "lon": -86.44389,
+      "region": "Michigan",
+      "llnr": "7-18620",
+      "light": {
+        "char": "Fl G 2.5s",
+        "color": "G",
+        "period_s": 2.5,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          2.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "ludington_light_439536_864694",
+      "name": "Ludington Light",
+      "short_name": "Ludington",
+      "lat": 43.95361,
+      "lon": -86.46944,
+      "region": "Michigan",
+      "llnr": "7-18530",
+      "light": {
+        "char": "Iso G 6s",
+        "color": "G",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "big_sable_point_light_440572_865150",
+      "name": "Big Sable Point Light",
+      "short_name": "Big Sable Point",
+      "lat": 44.05722,
+      "lon": -86.515,
+      "region": "Michigan",
+      "llnr": "7-18525",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "manitowoc_breakwater_light_440927_876436",
+      "name": "Manitowoc Breakwater Light",
+      "short_name": "Manitowoc Breakwater",
+      "lat": 44.0928,
+      "lon": -87.6436,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20860",
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "two_rivers_light_441427_875604",
+      "name": "Two Rivers Light",
+      "short_name": "Two Rivers",
+      "lat": 44.14279,
+      "lon": -87.56046,
+      "region": "Wisconsin / Illinois",
+      "llnr": "",
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "rawley_point_light_442106_875086",
+      "name": "Rawley Point Light",
+      "short_name": "Rawley Point",
+      "lat": 44.2106,
+      "lon": -87.5086,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20935",
+      "light": {
+        "char": "Fl W 15s",
+        "color": "W",
+        "period_s": 15.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          14.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "manistee_pierhead_lights_442517_863464",
+      "name": "Manistee Pierhead lights",
+      "short_name": "Manistee Pierhead lights",
+      "lat": 44.2517,
+      "lon": -86.3464,
+      "region": "Michigan",
+      "llnr": "7-18450",
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "kewaunee_pierhead_lighthouse_444572_874931",
+      "name": "Kewaunee Pierhead Lighthouse",
+      "short_name": "Kewaunee Pierheadhouse",
+      "lat": 44.4572,
+      "lon": -87.4931,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20955",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grassy_island_range_lights_445363_880049",
+      "name": "Grassy Island Range Lights",
+      "short_name": "Grassy Island Ranges",
+      "lat": 44.5363,
+      "lon": -88.0049,
+      "region": "Green Bay",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "long_tail_point_light_445959_879835",
+      "name": "Long Tail Point Light",
+      "short_name": "Long Tail Point",
+      "lat": 44.5959,
+      "lon": -87.9835,
+      "region": "Green Bay",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "algoma_pierhead_light_446069_874294",
+      "name": "Algoma Pierhead Light",
+      "short_name": "Algoma Pierhead",
+      "lat": 44.6069,
+      "lon": -87.4294,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-20975",
+      "light": {
+        "char": "Iso R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "frankfort_light_446306_862522",
+      "name": "Frankfort Light",
+      "short_name": "Frankfort",
+      "lat": 44.6306,
+      "lon": -86.2522,
+      "region": "Michigan",
+      "llnr": "7-18375",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "green_bay_harbor_entrance_light_446531_879013",
+      "name": "Green Bay Harbor Entrance Light",
+      "short_name": "Green Bay Harbor Entrance",
+      "lat": 44.6531,
+      "lon": -87.9013,
+      "region": "Green Bay",
+      "llnr": "7-22130",
+      "light": {
+        "char": "Oc R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          1.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "point_betsie_light_446912_862553",
+      "name": "Point Betsie Light",
+      "short_name": "Point Betsie",
+      "lat": 44.69122,
+      "lon": -86.25531,
+      "region": "Michigan",
+      "llnr": "7-18370",
+      "light": {
+        "char": "Fl W 10s",
+        "color": "W",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "sturgeon_bay_canal_north_pierhead_light_447919_873094",
+      "name": "Sturgeon Bay Canal North Pierhead Light",
+      "short_name": "Sturgeon Bay Canal North Pierhead",
+      "lat": 44.7919,
+      "lon": -87.3094,
+      "region": "Michigan",
+      "llnr": "7-21005",
+      "light": {
+        "char": "Fl R 2.5s",
+        "color": "R",
+        "period_s": 2.5,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          2.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "sturgeon_bay_canal_light_447950_873133",
+      "name": "Sturgeon Bay Canal Light",
+      "short_name": "Sturgeon Bay Canal",
+      "lat": 44.795,
+      "lon": -87.3133,
+      "region": "Michigan",
+      "llnr": "7-20995",
+      "light": {
+        "char": "Fl R 10s",
+        "color": "R",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "manning_memorial_light_448143_860673",
+      "name": "Manning Memorial Light",
+      "short_name": "Manning Memorial",
+      "lat": 44.8143,
+      "lon": -86.0673,
+      "region": "Michigan",
+      "llnr": "7-18366",
+      "light": {
+        "char": "Fl W 4s",
+        "color": "W",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "sherwood_point_light_448933_874333",
+      "name": "Sherwood Point Light",
+      "short_name": "Sherwood Point",
+      "lat": 44.8933,
+      "lon": -87.4333,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-22000",
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "peshtigo_reef_light_449566_875791",
+      "name": "Peshtigo Reef Light",
+      "short_name": "Peshtigo Reef",
+      "lat": 44.9566,
+      "lon": -87.5791,
+      "region": "Green Bay",
+      "llnr": "7-21990",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "mission_point_light_449913_854795",
+      "name": "Mission Point Light",
+      "short_name": "Mission Point",
+      "lat": 44.9913,
+      "lon": -85.4795,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "south_manitou_island_lighthouse_450072_860939",
+      "name": "South Manitou Island Lighthouse",
+      "short_name": "South Manitou Islandhouse",
+      "lat": 45.0072,
+      "lon": -86.0939,
+      "region": "Michigan",
+      "llnr": "7-18357",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "north_manitou_shoal_light_station_450200_859567",
+      "name": "North Manitou Shoal Light Station",
+      "short_name": "North Manitou Shoal Station",
+      "lat": 45.02,
+      "lon": -85.9567,
+      "region": "Michigan",
+      "llnr": "7-18340",
+      "light": {
+        "char": "Fl R 15s",
+        "color": "R",
+        "period_s": 15.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          14.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "baileys_harbor_light_450558_870969",
+      "name": "Baileys Harbor Light",
+      "short_name": "Baileys Harbor",
+      "lat": 45.0558,
+      "lon": -87.0969,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "green_island_light_450563_874929",
+      "name": "Green Island Light",
+      "short_name": "Green Island",
+      "lat": 45.0564,
+      "lon": -87.4929,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-21970",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "north_manitou_island_light_450630_859640",
+      "name": "North Manitou Island Light",
+      "short_name": "North Manitou Island",
+      "lat": 45.063,
+      "lon": -85.964,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "baileys_harbor_directional_light_450698_871193",
+      "name": "Baileys Harbor Directional Light",
+      "short_name": "Baileys Harbor Directional",
+      "lat": 45.06981,
+      "lon": -87.11938,
+      "region": "Michigan",
+      "llnr": "7-21228",
+      "light": {
+        "char": "Fl W 2.5s",
+        "color": "W",
+        "period_s": 2.5,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          2.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "baileys_harbor_range_front_light_450702_871197",
+      "name": "Baileys Harbor Range Front Light",
+      "short_name": "Baileys Harbor Range Front",
+      "lat": 45.07028,
+      "lon": -87.11972,
+      "region": "Michigan",
+      "llnr": "7-21228",
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "baileys_harbor_range_rear_light_450708_871211",
+      "name": "Baileys Harbor Range Rear Light",
+      "short_name": "Baileys Harbor Range Rear",
+      "lat": 45.07083,
+      "lon": -87.12111,
+      "region": "Michigan",
+      "llnr": "7-21229",
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "cana_island_light_450882_870467",
+      "name": "Cana Island Light",
+      "short_name": "Cana Island",
+      "lat": 45.0883,
+      "lon": -87.0467,
+      "region": "Michigan",
+      "llnr": "7-21255",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "menominee_pier_light_450972_875858",
+      "name": "Menominee Pier Light",
+      "short_name": "Menominee Pier",
+      "lat": 45.09722,
+      "lon": -87.58583,
+      "region": "Green Bay",
+      "llnr": "7-21935",
+      "light": {
+        "char": "Oc R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          1.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "eagle_bluff_light_451683_872367",
+      "name": "Eagle Bluff Light",
+      "short_name": "Eagle Bluff",
+      "lat": 45.1683,
+      "lon": -87.2367,
+      "region": "Michigan",
+      "llnr": "7-21825",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "chambers_island_light_452025_873647",
+      "name": "Chambers Island Light",
+      "short_name": "Chambers Island",
+      "lat": 45.2025,
+      "lon": -87.3647,
+      "region": "Wisconsin / Illinois",
+      "llnr": "7-21895",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grand_traverse_light_452100_855500",
+      "name": "Grand Traverse Light",
+      "short_name": "Grand Traverse",
+      "lat": 45.21,
+      "lon": -85.55,
+      "region": "Michigan",
+      "llnr": "7-18110",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "pilot_island_light_452843_869195",
+      "name": "Pilot Island Light",
+      "short_name": "Pilot Island",
+      "lat": 45.28439,
+      "lon": -86.91958,
+      "region": "Michigan",
+      "llnr": "7-21325",
+      "light": {
+        "char": "Fl(2) W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          0.5,
+          0.5
+        ],
+        "off_s": [
+          1.0,
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "plum_island_range_front_light_453037_869549",
+      "name": "Plum Island Range front light",
+      "short_name": "Plum Island Range front light",
+      "lat": 45.30375,
+      "lon": -86.95497,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "plum_island_range_rear_light_453077_869577",
+      "name": "Plum Island Range rear light",
+      "short_name": "Plum Island Range rear light",
+      "lat": 45.30778,
+      "lon": -86.95778,
+      "region": "Michigan",
+      "llnr": "7-21310",
+      "light": {
+        "char": "F R",
+        "color": "R",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "plum_island_range_lights_453077_869577",
+      "name": "Plum Island Range Lights",
+      "short_name": "Plum Island Ranges",
+      "lat": 45.30778,
+      "lon": -86.95778,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "charlevoix_south_pier_light_station_453202_852650",
+      "name": "Charlevoix South Pier Light Station",
+      "short_name": "Charlevoix South Pier Station",
+      "lat": 45.32028,
+      "lon": -85.265,
+      "region": "Michigan",
+      "llnr": "7-17925",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "south_fox_island_light_453785_858371",
+      "name": "South Fox Island Light",
+      "short_name": "South Fox Island",
+      "lat": 45.3785,
+      "lon": -85.8371,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "little_traverse_light_454189_849783",
+      "name": "Little Traverse Light",
+      "short_name": "Little Traverse",
+      "lat": 45.4189,
+      "lon": -84.9783,
+      "region": "Michigan",
+      "llnr": "7-17855",
+      "light": {
+        "char": "Fl G 6s",
+        "color": "G",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "pottawatomie_light_454277_868283",
+      "name": "Pottawatomie Light",
+      "short_name": "Pottawatomie",
+      "lat": 45.42778,
+      "lon": -86.82833,
+      "region": "Michigan",
+      "llnr": "7-21425",
+      "light": {
+        "char": "Fl W 4s",
+        "color": "W",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "st_martin_island_light_455027_867574",
+      "name": "St. Martin Island Light",
+      "short_name": "St. Martin Island",
+      "lat": 45.50278,
+      "lon": -86.7575,
+      "region": "Michigan",
+      "llnr": "7-21450",
+      "light": {
+        "char": "Alt W 5s, R 5s",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Wikidata (unparsed): Alt W 5s, R 5s"
+      }
+    },
+    {
+      "id": "poverty_island_light_station_455272_866636",
+      "name": "Poverty Island Light Station",
+      "short_name": "Poverty Island Station",
+      "lat": 45.52722,
+      "lon": -86.66361,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "minneapolis_shoal_light_station_455361_869983",
+      "name": "Minneapolis Shoal Light Station",
+      "short_name": "Minneapolis Shoal Station",
+      "lat": 45.5361,
+      "lon": -86.9983,
+      "region": "Michigan",
+      "llnr": "7-21610",
+      "light": {
+        "char": "Fl W 5s",
+        "color": "W",
+        "period_s": 5.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "beaver_island_head_light_455763_855725",
+      "name": "Beaver Island Head Light",
+      "short_name": "Beaver Island Head",
+      "lat": 45.57639,
+      "lon": -85.5725,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "peninsula_point_lighthouse_456680_869666",
+      "name": "Peninsula Point Lighthouse",
+      "short_name": "Peninsula Pointhouse",
+      "lat": 45.66806,
+      "lon": -86.96667,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "Fl W 30s",
+        "color": "W",
+        "period_s": 30.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          29.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "ile_aux_galets_456763_851716",
+      "name": "Ile Aux Galets",
+      "short_name": "Ile Aux Galets",
+      "lat": 45.67639,
+      "lon": -85.17167,
+      "region": "Straits / North",
+      "llnr": "7-17795",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "beaver_island_harbor_light_457428_855086",
+      "name": "Beaver Island Harbor Light",
+      "short_name": "Beaver Island Harbor",
+      "lat": 45.7428,
+      "lon": -85.5086,
+      "region": "Straits / North",
+      "llnr": "7-17845",
+      "light": {
+        "char": "Iso R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "sand_point_light_457444_870444",
+      "name": "Sand Point Light",
+      "short_name": "Sand Point",
+      "lat": 45.74444,
+      "lon": -87.04444,
+      "region": "Michigan",
+      "llnr": "",
+      "light": {
+        "char": "Iso W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "grays_reef_light_station_457666_851533",
+      "name": "Grays Reef Light Station",
+      "short_name": "Grays Reef Station",
+      "lat": 45.76667,
+      "lon": -85.15333,
+      "region": "Straits / North",
+      "llnr": "7-17775",
+      "light": {
+        "char": "Fl R 10s",
+        "color": "R",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "waugoshance_light_457750_850886",
+      "name": "Waugoshance Light",
+      "short_name": "Waugoshance",
+      "lat": 45.775,
+      "lon": -85.08861,
+      "region": "Straits / North",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "mcgulpin_point_light_457869_847722",
+      "name": "McGulpin Point Light",
+      "short_name": "McGulpin Point",
+      "lat": 45.7869,
+      "lon": -84.7722,
+      "region": "Straits / North",
+      "llnr": "7-12651",
+      "light": {
+        "char": "Fl W 4s",
+        "color": "W",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "old_mackinac_point_light_457875_847294",
+      "name": "Old Mackinac Point Light",
+      "short_name": "Old Mackinac Point",
+      "lat": 45.7875,
+      "lon": -84.72944,
+      "region": "Straits / North",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "round_island_light_458372_846168",
+      "name": "Round Island Light",
+      "short_name": "Round Island",
+      "lat": 45.83729,
+      "lon": -84.6169,
+      "region": "Straits / North",
+      "llnr": "7-12585",
+      "light": {
+        "char": "Fl W 10s",
+        "color": "W",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "squaw_island_light_458405_855869",
+      "name": "Squaw Island Light",
+      "short_name": "Squaw Island",
+      "lat": 45.84056,
+      "lon": -85.58694,
+      "region": "Straits / North",
+      "llnr": "",
+      "light": {
+        "char": "F W",
+        "color": "W",
+        "period_s": 1.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          0.0
+        ],
+        "source": "Characteristic not listed; using steady white until confirmed"
+      }
+    },
+    {
+      "id": "white_shoal_light_458422_851352",
+      "name": "White Shoal Light",
+      "short_name": "White Shoal",
+      "lat": 45.84222,
+      "lon": -85.13528,
+      "region": "Straits / North",
+      "llnr": "7-17750",
+      "light": {
+        "char": "Fl W 5s",
+        "color": "W",
+        "period_s": 5.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "round_island_passage_light_458433_846150",
+      "name": "Round Island Passage Light",
+      "short_name": "Round Island Passage",
+      "lat": 45.8433,
+      "lon": -84.615,
+      "region": "Straits / North",
+      "llnr": "7-12580",
+      "light": {
+        "char": "Fl R 4s",
+        "color": "R",
+        "period_s": 4.0,
+        "on_s": [
+          0.5
+        ],
+        "off_s": [
+          3.5
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "st_helena_island_light_458549_848633",
+      "name": "St. Helena Island Light",
+      "short_name": "St. Helena Island",
+      "lat": 45.855,
+      "lon": -84.8633,
+      "region": "Straits / North",
+      "llnr": "7-17720",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "wawatam_lighthouse_458658_847152",
+      "name": "Wawatam Lighthouse",
+      "short_name": "Wawatamhouse",
+      "lat": 45.86583,
+      "lon": -84.71528,
+      "region": "Straits / North",
+      "llnr": "7-12608",
+      "light": {
+        "char": "Fl W 5s",
+        "color": "W",
+        "period_s": 5.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          4.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "lansing_shoals_light_station_459033_855616",
+      "name": "Lansing Shoals Light Station",
+      "short_name": "Lansing Shoals Station",
+      "lat": 45.90333,
+      "lon": -85.56167,
+      "region": "Straits / North",
+      "llnr": "7-21535",
+      "light": {
+        "char": "Fl W 10s",
+        "color": "W",
+        "period_s": 10.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          9.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "seul_choix_light_459213_859119",
+      "name": "Seul Choix Light",
+      "short_name": "Seul Choix",
+      "lat": 45.92139,
+      "lon": -85.91194,
+      "region": "Michigan",
+      "llnr": "7-21490",
+      "light": {
+        "char": "Fl W 6s",
+        "color": "W",
+        "period_s": 6.0,
+        "on_s": [
+          1.0
+        ],
+        "off_s": [
+          5.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    },
+    {
+      "id": "manistique_east_breakwater_light_459446_862472",
+      "name": "Manistique East Breakwater Light",
+      "short_name": "Manistique East Breakwater",
+      "lat": 45.9446,
+      "lon": -86.2472,
+      "region": "Michigan",
+      "llnr": "7-21475",
+      "light": {
+        "char": "Iso R 6s",
+        "color": "R",
+        "period_s": 6.0,
+        "on_s": [
+          3.0
+        ],
+        "off_s": [
+          3.0
+        ],
+        "source": "Wikidata / USCG-style characteristic"
+      }
+    }
+  ]
+}
