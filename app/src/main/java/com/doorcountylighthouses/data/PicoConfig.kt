@@ -25,6 +25,8 @@ data class PicoConfig(
     val weekendOnHour: Int = 6,
     val weekendOnMinute: Int = 0,
     val firmwareVersion: String? = null,
+    val updateAvailable: Boolean = false,
+    val updateVersion: String? = null,
 )
 
 data class GpioChoice(val pin: Int, val label: String)

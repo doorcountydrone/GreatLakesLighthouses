@@ -1,0 +1,25 @@
+{
+  "version": "0.6.0",
+  "files": [
+    {
+      "name": "main.py",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/main.py"
+    },
+    {
+      "name": "wifi_manager.py",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/wifi_manager.py"
+    },
+    {
+      "name": "updater.py",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/updater.py"
+    },
+    {
+      "name": "boot.py",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/boot.py"
+    },
+    {
+      "name": "help.html",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/help.html"
+    }
+  ]
+}

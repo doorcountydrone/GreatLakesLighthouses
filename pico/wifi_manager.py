@@ -430,6 +430,11 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 </div>
 <button type="submit">Save &amp; Reboot</button>
 </form>
+<h2>Firmware update</h2>
+<p class="note">The map must already be on home Wi-Fi with internet. This does not change your light list or Wi-Fi password. The map restarts when the update starts.</p>
+<form action="/start-update" method="post">
+<button type="submit">Install firmware update</button>
+</form>
 </div>
 <div id="panelHelp">
 <iframe src="/help" title="Help" style="width:100%;min-height:75vh;border:0;background:#0B1F3A"></iframe>
@@ -760,6 +765,15 @@ def run_server(force_ap=False):
                 out = merge_defaults(load_config())
                 out.pop("password", None)
                 out["ok"] = True
+                out["update_available"] = False
+                try:
+                    import sys
+                    ver = getattr(sys.modules.get("__main__"), "FIRMWARE_VERSION", None)
+                    if ver:
+                        out["version"] = ver
+                        out["name"] = "GreatLakesLighthouses"
+                except Exception:
+                    pass
                 send_json(conn, out)
             elif first.startswith("POST /update-config"):
                 src = parse_body(request)
@@ -772,6 +786,38 @@ def run_server(force_ap=False):
                     conn = None
                     time.sleep(1)
                     machine.reset()
+            elif first.startswith("POST /start-update"):
+                try:
+                    import sys
+                    import updater
+                    current = "0.0.0"
+                    try:
+                        current = getattr(sys.modules.get("__main__"), "FIRMWARE_VERSION", "0.0.0")
+                    except Exception:
+                        pass
+                    has_update, version_info = updater.check_for_new_version(current)
+                    if has_update and version_info:
+                        send(conn, "200 OK", "text/plain", "Installing...")
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
+                        conn = None
+                        time.sleep(0.2)
+                        updater.install_pending_update(version_info)
+                    else:
+                        send(
+                            conn,
+                            "409 Conflict",
+                            "text/plain",
+                            "No update available. The map needs home Wi-Fi and internet to download.",
+                        )
+                except Exception as e:
+                    print("start-update error:", e)
+                    try:
+                        send(conn, "500 Internal Server Error", "text/plain", "Update error.")
+                    except Exception:
+                        pass
             elif first.startswith("POST /configure"):
                 src = parse_body(request)
                 if "application/json" not in request:

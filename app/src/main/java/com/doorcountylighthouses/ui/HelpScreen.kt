@@ -143,6 +143,13 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         )
 
         HelpCard(
+            title = "Firmware updates",
+            body = "After the map joins home Wi-Fi, it checks online for a newer version. It does not install by itself.\n\n" +
+                "If an update is waiting, the lights flash amber for a couple of seconds after startup. On Pico settings, tap Install firmware update. You can also tap the setup button quickly while the map is running. A long hold at power-on still opens GreatLakes-Setup.\n\n" +
+                "The map must be on home Wi-Fi with internet. Your light list and Wi-Fi stay. The map restarts when the update starts. Wait about 30 seconds, then Fetch to confirm.",
+        )
+
+        HelpCard(
             title = "Using a browser instead of the app",
             body = "On GreatLakes-Setup, open http://192.168.4.1 in any browser. After the map is on home Wi-Fi, open http:// then the map’s home-network address.\n\n" +
                 "You will see the same three tabs: Lighthouses, Pico settings, and Help. Lighthouses is the light list. Pico settings is Wi-Fi, brightness, and sleep.",

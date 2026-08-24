@@ -17,7 +17,7 @@ try:
 except ImportError:
     ntptime = None
 
-FIRMWARE_VERSION = "0.5.4"
+FIRMWARE_VERSION = "0.6.0"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -64,6 +64,10 @@ status = {
     "last_fetch": None,
     "stations": {},
 }
+update_available = False
+update_info = None
+_ota_btn = None
+_ota_down_ms = None
 sleep_cfg = {
     "sleep_enabled": False,
     "sleep_at_hour": 22,
@@ -719,13 +723,13 @@ def read_http(conn):
         return "", ""
 
 
-def _http_send(conn, content_type, body):
+def _http_send(conn, content_type, body, status="200 OK"):
     if isinstance(body, str):
         body = body.encode()
     hdr = (
-        "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %d\r\n"
+        "HTTP/1.1 %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n"
         "Connection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n"
-        % (content_type, len(body))
+        % (status, content_type, len(body))
     )
     data = hdr.encode() + body
     while data:
@@ -733,6 +737,92 @@ def _http_send(conn, content_type, body):
         if not sent:
             break
         data = data[sent:]
+
+
+def _handle_start_update(conn):
+    global update_available, update_info
+    try:
+        import updater
+        if update_available and update_info:
+            has_update = True
+            version_info = update_info
+        else:
+            has_update, version_info = updater.check_for_new_version(FIRMWARE_VERSION)
+            update_available = has_update
+            update_info = version_info
+        if has_update and version_info:
+            _http_send(conn, "text/plain", "Installing...", "200 OK")
+            try:
+                conn.close()
+            except Exception:
+                pass
+            time.sleep_ms(200)
+            updater.install_pending_update(version_info)
+            return
+        print("OTA POST /start-update: no newer firmware")
+        _http_send(conn, "text/plain", "No update available.", "409 Conflict")
+    except Exception as e:
+        print("OTA POST /start-update error:", e)
+        try:
+            _http_send(conn, "text/plain", "Update error.", "500 Internal Server Error")
+        except Exception:
+            pass
+
+
+def check_for_ota():
+    global update_available, update_info
+    print("OTA: checking for newer firmware...")
+    try:
+        import updater
+        has_update, version_info = updater.check_for_new_version(FIRMWARE_VERSION)
+        update_available = has_update
+        update_info = version_info
+        if has_update:
+            print("OTA: new version", version_info.get("version"), "- install from the app, browser, or a short tap on the setup button")
+            try:
+                paint_all((255, 160, 0))
+                time.sleep(2)
+            except Exception:
+                pass
+        else:
+            print("OTA: device firmware current (or check unreachable)")
+    except Exception as e:
+        print("OTA check error:", e)
+        update_available = False
+        update_info = None
+
+
+def init_ota_button():
+    global _ota_btn
+    try:
+        _ota_btn = machine.Pin(FORCE_AP_BUTTON_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+    except Exception as e:
+        _ota_btn = None
+        print("OTA button skipped:", e)
+
+
+def poll_ota_button():
+    global _ota_down_ms
+    if _ota_btn is None or not update_available:
+        return
+    pressed = _ota_btn.value() == 0
+    now = time.ticks_ms()
+    if pressed:
+        if _ota_down_ms is None:
+            _ota_down_ms = now
+        return
+    if _ota_down_ms is None:
+        return
+    held = time.ticks_diff(now, _ota_down_ms)
+    _ota_down_ms = None
+    if held < 50 or held > 800:
+        return
+    print("OTA: setup button tap - installing")
+    try:
+        import updater
+        updater.install_pending_update(update_info)
+    except Exception as e:
+        print("OTA button install:", e)
 
 
 def _request_path(line):
@@ -792,6 +882,8 @@ def _handle_conn(conn):
                 "last_fetch": status.get("last_fetch"),
                 "stations": list((status.get("stations") or {}).keys()),
                 "lights": len(lighthouses),
+                "update_available": update_available,
+                "update_version": (update_info or {}).get("version", "") if update_available else "",
             }))
         elif method == "GET" and path == "/config":
             import wifi_manager
@@ -800,7 +892,12 @@ def _handle_conn(conn):
             out["ok"] = True
             out["version"] = FIRMWARE_VERSION
             out["name"] = "GreatLakesLighthouses"
+            out["update_available"] = update_available
+            if update_info:
+                out["update_version"] = update_info.get("version", "")
             _http_send(conn, "application/json", json.dumps(out))
+        elif method == "POST" and path == "/start-update":
+            _handle_start_update(conn)
         elif method == "POST" and path in ("/update-config", "/configure"):
             import wifi_manager
             is_json = bool(req_body) and req_body.lstrip()[:1] == "{"
@@ -895,9 +992,12 @@ def main():
     sync_ntp()
     fetch_metars()
     start_http()
+    init_ota_button()
+    check_for_ota()
     last_fetch = time.time()
     while True:
         handle_http()
+        poll_ota_button()
         now = time.time()
         if now - last_fetch >= CYCLE_DELAY:
             if not in_sleep_window():

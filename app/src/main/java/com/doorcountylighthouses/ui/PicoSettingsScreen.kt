@@ -88,6 +88,8 @@ fun PicoSettingsScreen(
     var weekendOffMenuExpanded by remember { mutableStateOf(false) }
     var weekendOnMenuExpanded by remember { mutableStateOf(false) }
     var firmwareVersion by remember { mutableStateOf<String?>(null) }
+    var updateAvailable by remember { mutableStateOf(false) }
+    var updateVersion by remember { mutableStateOf<String?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -112,6 +114,8 @@ fun PicoSettingsScreen(
         weekendOnHour = cfg.weekendOnHour.toString()
         weekendOnMinute = cfg.weekendOnMinute.toString()
         firmwareVersion = cfg.firmwareVersion
+        updateAvailable = cfg.updateAvailable
+        updateVersion = cfg.updateVersion
     }
 
     fun currentConfig() = PicoConfig(
@@ -167,6 +171,20 @@ fun PicoSettingsScreen(
         }
     }
 
+    fun installFirmwareUpdate() {
+        isLoading = true
+        statusMessage = "Starting firmware update…"
+        scope.launch {
+            when (val result = api.startUpdate(picoBaseUrl)) {
+                is PicoConfigApi.UpdateResult.Success ->
+                    statusMessage = result.message
+                is PicoConfigApi.UpdateResult.Error ->
+                    statusMessage = result.message
+            }
+            isLoading = false
+        }
+    }
+
     LaunchedEffect(Unit) {
         loadFromPico()
     }
@@ -190,7 +208,17 @@ fun PicoSettingsScreen(
             color = Fog,
         )
         firmwareVersion?.let {
-            Text(text = "Firmware v$it", style = MaterialTheme.typography.labelSmall, color = Fog)
+            Text(
+                text = buildString {
+                    append("Firmware v$it")
+                    if (updateAvailable) {
+                        append(" — update available")
+                        updateVersion?.let { v -> append(" (v$v)") }
+                    }
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (updateAvailable) Amber else Fog,
+            )
         }
         OutlinedTextField(
             value = picoBaseUrl,
@@ -257,6 +285,28 @@ fun PicoSettingsScreen(
                 Text("Save & reboot")
             }
         }
+        Button(
+            onClick = { installFirmwareUpdate() },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (updateAvailable) Amber else MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        ) {
+            Text(
+                if (updateAvailable) {
+                    "Install firmware update" + (updateVersion?.let { " (v$it)" } ?: "")
+                } else {
+                    "Install firmware update"
+                },
+            )
+        }
+        Text(
+            text = "The map must be on home Wi-Fi with internet. Your light list and Wi-Fi stay. The map restarts when the update starts.",
+            style = MaterialTheme.typography.bodySmall,
+            color = Fog,
+        )
         statusMessage?.let {
             Text(text = it, style = MaterialTheme.typography.bodySmall, color = Amber)
         }
