@@ -1,5 +1,6 @@
 package com.doorcountylighthouses.pico
 
+import com.doorcountylighthouses.data.BRIGHTNESS_SLIDER_MAX
 import com.doorcountylighthouses.data.PicoConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -124,9 +125,9 @@ class PicoConfigApi {
         val password = config.password
         if (password.isNotEmpty()) put("password", password)
         put("led_pin", config.ledPin.coerceIn(0, 28))
-        put("min_brightness", config.minBrightness.coerceIn(0, 255))
-        put("max_brightness", config.maxBrightness.coerceIn(1, 255))
-        put("brightness", (config.maxBrightness.coerceIn(1, 255) / 255.0).coerceIn(0.02, 1.0))
+        put("min_brightness", config.minBrightness.coerceIn(0, BRIGHTNESS_SLIDER_MAX))
+        put("max_brightness", config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX))
+        put("brightness", (config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX) / 255.0).coerceIn(0.02, 1.0))
         put("sleep_enabled", config.sleepEnabled)
         put("sleep_at_hour", config.sleepAtHour.coerceIn(0, 23))
         put("sleep_at_minute", config.sleepAtMinute.coerceIn(0, 59))
@@ -148,10 +149,10 @@ class PicoConfigApi {
         password = "",
         ledPin = json.intLoose("led_pin", 0).coerceIn(0, 28),
         brightness = json.floatLoose("brightness", 0.18f).coerceIn(0.02f, 1f),
-        minBrightness = json.intLoose("min_brightness", 2).coerceIn(0, 255),
+        minBrightness = json.intLoose("min_brightness", 2).coerceIn(0, BRIGHTNESS_SLIDER_MAX),
         maxBrightness = run {
-            val fromMax = if (json.has("max_brightness")) json.intLoose("max_brightness", 46) else null
-            (fromMax ?: (json.floatLoose("brightness", 0.18f) * 255f).toInt()).coerceIn(1, 255)
+            val fromMax = if (json.has("max_brightness")) json.intLoose("max_brightness", 18) else null
+            (fromMax ?: (json.floatLoose("brightness", 0.18f) * 255f).toInt()).coerceIn(1, BRIGHTNESS_SLIDER_MAX)
         },
         numLeds = json.intLoose("num_leds", 13),
         cycleDelay = json.intLoose("cycle_delay", 300),

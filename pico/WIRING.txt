@@ -14,9 +14,12 @@ Default pins (same layout as MetarMap)
   Strip data            0
   Force setup AP        15  (momentary button to GND; hold ~3 s at boot)
   LDR drive (optional)  21  (output high)
-  LDR read (optional)   26  (ADC0); 10 kΩ to GND on the ADC side
+  LDR read (optional)  26  (ADC0); resistor to GND on the ADC side.
+                       10k is smoother indoors than 47k. 47k still works;
+                       firmware 0.5.1+ maps brightness to the range the
+                       sensor actually uses.
 
-LED order (south → north)
+LED order (south to north)
 -------------------------
   0  Kewaunee Pierhead
   1  Algoma Pierhead

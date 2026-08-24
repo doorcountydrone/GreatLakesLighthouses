@@ -135,7 +135,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             title = "Wi-Fi, brightness, and sleep",
             body = "• Fetch / Reload loads the map’s current settings. The Wi-Fi password is never shown; leave Password blank to keep the one already saved.\n\n" +
                 "• Home Wi-Fi name and password are for your router, not GreatLakes-Setup.\n\n" +
-                "• Max brightness is how bright the lights get in a bright room. Min brightness should stay at 2 so red and white still look right when the room is dark.\n\n" +
+                "• Max brightness is how bright the lights get in a bright room (1 to 30). Min brightness should stay at 2 so red and white still look right when the room is dark.\n\n" +
                 "• Sleep turns the lights off and on each night. Set the time offset first (Central: -6 in winter, -5 in daylight saving. Eastern: -5 / -4).\n\n" +
                 "• Weekend / long off is an extra off stretch, for example Friday evening to Monday morning. It works together with nightly sleep.\n\n" +
                 "• Save writes the settings. Save & reboot is the sure way after you change Wi-Fi.\n\n" +

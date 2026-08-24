@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.doorcountylighthouses.data.BRIGHTNESS_SLIDER_MAX
 import com.doorcountylighthouses.data.GPIO_CHOICES
 import com.doorcountylighthouses.data.ISO_WEEKDAY_NAMES
 import com.doorcountylighthouses.data.PicoConfig
@@ -70,7 +71,7 @@ fun PicoSettingsScreen(
     var pinMenuExpanded by remember { mutableStateOf(false) }
     var brightness by remember { mutableFloatStateOf(0.18f) }
     var minBrightness by remember { mutableStateOf("2") }
-    var maxBrightness by remember { mutableFloatStateOf(46f) }
+    var maxBrightness by remember { mutableFloatStateOf(18f) }
     var timezoneOffsetHours by remember { mutableStateOf("-5") }
     var sleepEnabled by remember { mutableStateOf(false) }
     var sleepAtHour by remember { mutableStateOf("22") }
@@ -96,7 +97,7 @@ fun PicoSettingsScreen(
         ledPin = cfg.ledPin
         brightness = cfg.brightness
         minBrightness = cfg.minBrightness.toString()
-        maxBrightness = cfg.maxBrightness.toFloat()
+        maxBrightness = cfg.maxBrightness.toFloat().coerceIn(2f, BRIGHTNESS_SLIDER_MAX.toFloat())
         timezoneOffsetHours = cfg.timezoneOffsetHours.toString()
         sleepEnabled = cfg.sleepEnabled
         sleepAtHour = cfg.sleepAtHour.toString()
@@ -118,8 +119,8 @@ fun PicoSettingsScreen(
         password = password,
         ledPin = ledPin,
         brightness = maxBrightness / 255f,
-        minBrightness = minBrightness.toIntOrNull()?.coerceIn(0, 255) ?: 2,
-        maxBrightness = maxBrightness.toInt().coerceIn(1, 255),
+        minBrightness = minBrightness.toIntOrNull()?.coerceIn(0, BRIGHTNESS_SLIDER_MAX) ?: 2,
+        maxBrightness = maxBrightness.toInt().coerceIn(1, BRIGHTNESS_SLIDER_MAX),
         sleepEnabled = sleepEnabled,
         sleepAtHour = sleepAtHour.toIntOrNull() ?: 22,
         sleepAtMinute = sleepAtMinute.toIntOrNull() ?: 0,
@@ -306,13 +307,13 @@ fun PicoSettingsScreen(
         Slider(
             value = maxBrightness,
             onValueChange = { maxBrightness = it },
-            valueRange = 2f..255f,
+            valueRange = 2f..BRIGHTNESS_SLIDER_MAX.toFloat(),
             enabled = !isLoading,
         )
         OutlinedTextField(
             value = minBrightness,
-            onValueChange = { s -> if (s.isEmpty() || s.all { it.isDigit() } && s.toIntOrNull() in 0..255) minBrightness = s },
-            label = { Text("Min brightness (0-255)") },
+            onValueChange = { s -> if (s.isEmpty() || s.all { it.isDigit() } && s.toIntOrNull() in 0..BRIGHTNESS_SLIDER_MAX) minBrightness = s },
+            label = { Text("Min brightness (0-$BRIGHTNESS_SLIDER_MAX)") },
             supportingText = { Text("Use 2 in the dark so WS2812 red/white still look right, same as MetarMap.") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),

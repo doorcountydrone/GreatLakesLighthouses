@@ -15,6 +15,7 @@ DEFAULT_LED_PIN = 0
 DEFAULT_NUM_LEDS = 13
 DEFAULT_BRIGHTNESS = 0.18
 STARTUP_BRIGHTNESS = 0.2
+BRIGHTNESS_CAP = 30
 
 DEFAULT_SLEEP = {
     "sleep_enabled": False,
@@ -156,13 +157,13 @@ def apply_fields(cfg, src):
     if "led_pin" in src and str(src["led_pin"]) != "":
         cfg["led_pin"] = _clamp(int(src["led_pin"]), 0, 28)
     if "min_brightness" in src and str(src["min_brightness"]) != "":
-        cfg["min_brightness"] = _clamp(int(float(src["min_brightness"])), 0, 255)
+        cfg["min_brightness"] = _clamp(int(float(src["min_brightness"])), 0, BRIGHTNESS_CAP)
     if "max_brightness" in src and str(src["max_brightness"]) != "":
-        cfg["max_brightness"] = _clamp(int(float(src["max_brightness"])), 1, 255)
+        cfg["max_brightness"] = _clamp(int(float(src["max_brightness"])), 1, BRIGHTNESS_CAP)
         cfg["brightness"] = max(0.02, min(1.0, cfg["max_brightness"] / 255.0))
     elif "brightness" in src and str(src["brightness"]) != "":
         cfg["brightness"] = max(0.02, min(1.0, float(src["brightness"])))
-        cfg["max_brightness"] = _clamp(int(round(cfg["brightness"] * 255)), 1, 255)
+        cfg["max_brightness"] = _clamp(int(round(cfg["brightness"] * 255)), 1, BRIGHTNESS_CAP)
     if "beacon_pulse" in src:
         cfg["beacon_pulse"] = _as_bool(src["beacon_pulse"])
     if "sleep_enabled" in src:
@@ -214,12 +215,18 @@ def merge_defaults(cfg):
         "led_pin": DEFAULT_LED_PIN,
         "brightness": DEFAULT_BRIGHTNESS,
         "min_brightness": 2,
-        "max_brightness": _clamp(int(round(DEFAULT_BRIGHTNESS * 255)), 1, 255),
+        "max_brightness": _clamp(int(round(DEFAULT_BRIGHTNESS * 255)), 1, BRIGHTNESS_CAP),
         "beacon_pulse": True,
         "cycle_delay": 300,
     }
     out.update(DEFAULT_SLEEP)
     out.update(cfg)
+    try:
+        out["max_brightness"] = _clamp(int(out.get("max_brightness", 18)), 1, BRIGHTNESS_CAP)
+        out["min_brightness"] = _clamp(int(out.get("min_brightness", 2)), 0, out["max_brightness"])
+    except Exception:
+        out["max_brightness"] = 18
+        out["min_brightness"] = 2
     return out
 
 
@@ -390,10 +397,10 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <div><label>Strip data pin</label><select name="led_pin">__GPIO_OPTS__</select></div>
 </div>
 <div class="row">
-<div><label>Min brightness (0-255)</label><input name="min_brightness" type="number" min="0" max="255" value="__MINB__"></div>
-<div><label>Max brightness (0-255)</label><input name="max_brightness" type="number" min="1" max="255" value="__MAXB__"></div>
+<div><label>Min brightness (0-30)</label><input name="min_brightness" type="number" min="0" max="30" value="__MINB__"></div>
+<div><label>Max brightness (1-30)</label><input name="max_brightness" type="number" min="1" max="30" value="__MAXB__"></div>
 </div>
-<p class="note">Slider max in the app is the bright-room ceiling. Min 2 keeps WS2812 colors correct in the dark (same as MetarMap).</p>
+<p class="note">Max 30 is plenty for a wall map. Min 2 keeps WS2812 colors correct in the dark.</p>
 <label>Refresh seconds</label>
 <input name="cycle_delay" type="number" min="30" max="3600" value="__CYCLE__">
 <label><input name="beacon_pulse" type="checkbox" value="1" __BEACON__ style="width:auto"> Beacon pulse on clear weather</label>

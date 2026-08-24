@@ -1,5 +1,6 @@
 import gc
 import json
+import math
 import machine
 import neopixel
 import network
@@ -16,7 +17,7 @@ try:
 except ImportError:
     ntptime = None
 
-FIRMWARE_VERSION = "0.5.0"
+FIRMWARE_VERSION = "0.5.4"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -24,11 +25,12 @@ LED_PIN = 0
 NUM_LEDS = 13
 BRIGHTNESS = 0.18
 MIN_BRIGHTNESS = 2
-MAX_BRIGHTNESS = 46
+MAX_BRIGHTNESS = 18
 BEACON_PULSE = True
 CYCLE_DELAY = 300
 LDR_DRIVE_PIN = 21
 LDR_ADC_PIN = 26
+BRIGHTNESS_CAP = 30
 
 # Navigation-light colors (not METAR categories). White is warm lantern, not cool RGB white.
 LIGHT_RGB = {
@@ -79,6 +81,19 @@ sleep_cfg = {
 }
 clock_trusted = False
 ldr_adc = None
+_ldr_filt = None
+_ldr_lo = None
+_ldr_hi = None
+_ldr_out = None
+_ldr_last_ms = 0
+_ldr_print_ms = 0
+# 47k to GND + this LDR stays around ADC 700-13000 (log about -3.7..-1.4).
+# The old +2.6 "bright" end is full-scale ADC and never happens, so the
+# strip sat on min. Fit the sliders to the range this circuit actually uses.
+LDR_LOG_DARK = -3.7
+LDR_LOG_BRIGHT = -1.35
+LDR_MIN_SPAN = 1.2
+LDR_TAU_S = 2.2
 
 
 def _clamp(n, lo, hi):
@@ -96,10 +111,10 @@ def load_config():
     NUM_LEDS = _clamp(int(cfg.get("num_leds", 13)), 1, 300)
     BRIGHTNESS = max(0.02, min(1.0, float(cfg.get("brightness", 0.18))))
     if "max_brightness" in cfg:
-        MAX_BRIGHTNESS = _clamp(int(cfg.get("max_brightness", 46)), 1, 255)
+        MAX_BRIGHTNESS = _clamp(int(cfg.get("max_brightness", 18)), 1, BRIGHTNESS_CAP)
     else:
-        MAX_BRIGHTNESS = _clamp(int(round(BRIGHTNESS * 255)), 1, 255)
-    MIN_BRIGHTNESS = _clamp(int(cfg.get("min_brightness", 2)), 0, 255)
+        MAX_BRIGHTNESS = _clamp(int(round(BRIGHTNESS * 255)), 1, BRIGHTNESS_CAP)
+    MIN_BRIGHTNESS = _clamp(int(cfg.get("min_brightness", 2)), 0, BRIGHTNESS_CAP)
     if MIN_BRIGHTNESS > MAX_BRIGHTNESS:
         MIN_BRIGHTNESS = MAX_BRIGHTNESS
     BRIGHTNESS = max(0.02, min(1.0, MAX_BRIGHTNESS / 255.0))
@@ -174,17 +189,77 @@ def init_strip():
     print("Strip GPIO", LED_PIN, "x", NUM_LEDS)
 
 
+def _ldr_log_from_adc(raw):
+    v = raw / 65535.0
+    if v < 0.004:
+        v = 0.004
+    elif v > 0.98:
+        v = 0.98
+    return math.log(v / (1.0 - v))
+
+
+def _ldr_refresh():
+    """Update cached brightness once per frame (not once per LED)."""
+    global _ldr_filt, _ldr_lo, _ldr_hi, _ldr_out, _ldr_last_ms, _ldr_print_ms
+    if ldr_adc is None:
+        _ldr_out = float(MAX_BRIGHTNESS)
+        return int(_ldr_out)
+    try:
+        acc = 0
+        for _ in range(16):
+            acc += ldr_adc.read_u16()
+        raw = acc >> 4
+    except Exception:
+        _ldr_out = float(MAX_BRIGHTNESS)
+        return int(_ldr_out)
+
+    logv = _ldr_log_from_adc(raw)
+    now = time.ticks_ms()
+    if _ldr_filt is None:
+        _ldr_filt = logv
+        _ldr_lo = LDR_LOG_DARK
+        _ldr_hi = LDR_LOG_BRIGHT
+        dt = LDR_TAU_S
+    else:
+        dt = time.ticks_diff(now, _ldr_last_ms) / 1000.0
+        if dt < 0.001:
+            dt = 0.001
+        elif dt > 0.25:
+            dt = 0.25
+    _ldr_last_ms = now
+    alpha = 1.0 - math.exp(-dt / LDR_TAU_S)
+    _ldr_filt = _ldr_filt + (logv - _ldr_filt) * alpha
+
+    if _ldr_filt < _ldr_lo:
+        _ldr_lo = _ldr_filt
+    if _ldr_filt > _ldr_hi:
+        _ldr_hi = _ldr_filt
+    span = _ldr_hi - _ldr_lo
+    if span < LDR_MIN_SPAN:
+        mid = (_ldr_lo + _ldr_hi) * 0.5
+        _ldr_lo = mid - LDR_MIN_SPAN * 0.5
+        _ldr_hi = mid + LDR_MIN_SPAN * 0.5
+        span = LDR_MIN_SPAN
+
+    t = (_ldr_filt - _ldr_lo) / span
+    if t < 0.0:
+        t = 0.0
+    elif t > 1.0:
+        t = 1.0
+    level = t * (MAX_BRIGHTNESS - MIN_BRIGHTNESS) + MIN_BRIGHTNESS
+    _ldr_out = level
+    out = _clamp(int(level + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+
+    if time.ticks_diff(now, _ldr_print_ms) > 2500:
+        _ldr_print_ms = now
+        print("LDR", raw, "log", round(_ldr_filt, 2), "win", round(_ldr_lo, 2), round(_ldr_hi, 2), "->", out)
+    return out
+
+
 def _ldr_level():
-    """0-255. Same mapping as MetarMap: high ADC (dark) -> closer to max."""
-    level = MAX_BRIGHTNESS
-    if ldr_adc is not None:
-        try:
-            raw = ldr_adc.read_u16()
-            span = max(0, MAX_BRIGHTNESS - MIN_BRIGHTNESS)
-            level = int((raw / 65535.0) * span + MIN_BRIGHTNESS)
-        except Exception:
-            pass
-    return _clamp(level, MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+    if _ldr_out is None:
+        return _ldr_refresh()
+    return _clamp(int(_ldr_out + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
 
 
 def scale_color(rgb, brightness=None):
@@ -536,6 +611,7 @@ def render_frame():
         paint_all((0, 0, 0))
         return
     now_ms = time.ticks_ms()
+    _ldr_refresh()
     used = {}
     for lh in lighthouses:
         led_i = int(lh.get("led", 0))

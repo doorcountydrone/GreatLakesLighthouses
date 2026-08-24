@@ -1,12 +1,14 @@
 package com.doorcountylighthouses.data
 
+const val BRIGHTNESS_SLIDER_MAX = 30
+
 data class PicoConfig(
     val ssid: String = "",
     val password: String = "",
     val ledPin: Int = 0,
     val brightness: Float = 0.18f,
     val minBrightness: Int = 2,
-    val maxBrightness: Int = 46,
+    val maxBrightness: Int = 18,
     val numLeds: Int = 13,
     val cycleDelay: Int = 300,
     val sleepEnabled: Boolean = false,
