@@ -16,13 +16,15 @@ try:
 except ImportError:
     ntptime = None
 
-FIRMWARE_VERSION = "0.4.0"
+FIRMWARE_VERSION = "0.5.0"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
 LED_PIN = 0
 NUM_LEDS = 13
 BRIGHTNESS = 0.18
+MIN_BRIGHTNESS = 2
+MAX_BRIGHTNESS = 46
 BEACON_PULSE = True
 CYCLE_DELAY = 300
 LDR_DRIVE_PIN = 21
@@ -53,6 +55,7 @@ lighthouses = []
 strip = None
 wlan = None
 http_sock = None
+http_sock_8080 = None
 status = {
     "version": FIRMWARE_VERSION,
     "ip": None,
@@ -83,7 +86,7 @@ def _clamp(n, lo, hi):
 
 
 def load_config():
-    global LED_PIN, NUM_LEDS, BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg
+    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg
     try:
         with open(CONFIG_FILE, "r") as f:
             cfg = json.load(f)
@@ -92,6 +95,14 @@ def load_config():
     LED_PIN = _clamp(int(cfg.get("led_pin", 0)), 0, 28)
     NUM_LEDS = _clamp(int(cfg.get("num_leds", 13)), 1, 300)
     BRIGHTNESS = max(0.02, min(1.0, float(cfg.get("brightness", 0.18))))
+    if "max_brightness" in cfg:
+        MAX_BRIGHTNESS = _clamp(int(cfg.get("max_brightness", 46)), 1, 255)
+    else:
+        MAX_BRIGHTNESS = _clamp(int(round(BRIGHTNESS * 255)), 1, 255)
+    MIN_BRIGHTNESS = _clamp(int(cfg.get("min_brightness", 2)), 0, 255)
+    if MIN_BRIGHTNESS > MAX_BRIGHTNESS:
+        MIN_BRIGHTNESS = MAX_BRIGHTNESS
+    BRIGHTNESS = max(0.02, min(1.0, MAX_BRIGHTNESS / 255.0))
     BEACON_PULSE = bool(cfg.get("beacon_pulse", True))
     CYCLE_DELAY = _clamp(int(cfg.get("cycle_delay", 300)), 30, 3600)
     for k in sleep_cfg:
@@ -136,12 +147,22 @@ def connect_wifi(cfg):
 
 def load_lighthouses():
     global lighthouses
-    with open(LIGHTHOUSE_FILE, "r") as f:
-        data = json.load(f)
-    items = data.get("lighthouses", [])
-    items.sort(key=lambda x: int(x.get("led", 0)))
-    lighthouses = items
-    print("Loaded", len(lighthouses), "lighthouses")
+    try:
+        with open(LIGHTHOUSE_FILE, "r") as f:
+            raw = f.read()
+        if raw.startswith("\ufeff"):
+            raw = raw[1:]
+        data = json.loads(raw)
+        items = data.get("lighthouses", []) if isinstance(data, dict) else data
+        if not isinstance(items, list):
+            raise ValueError("lighthouses is not a list")
+        items.sort(key=lambda x: int(x.get("led", 0)))
+        lighthouses = items
+        print("Loaded", len(lighthouses), "lighthouses")
+    except Exception as e:
+        print("lighthouses.json failed:", e)
+        print("Re-copy pico/lighthouses.json to the Pico as UTF-8 text.")
+        lighthouses = []
 
 
 def init_strip():
@@ -153,22 +174,29 @@ def init_strip():
     print("Strip GPIO", LED_PIN, "x", NUM_LEDS)
 
 
-def scale_color(rgb, brightness=None):
-    if brightness is None:
-        brightness = BRIGHTNESS
+def _ldr_level():
+    """0-255. Same mapping as MetarMap: high ADC (dark) -> closer to max."""
+    level = MAX_BRIGHTNESS
     if ldr_adc is not None:
         try:
             raw = ldr_adc.read_u16()
-            # Darker room -> dimmer map (rough)
-            ambient = 1.0 - (raw / 65535.0)
-            brightness = max(0.04, min(BRIGHTNESS, 0.05 + ambient * BRIGHTNESS))
+            span = max(0, MAX_BRIGHTNESS - MIN_BRIGHTNESS)
+            level = int((raw / 65535.0) * span + MIN_BRIGHTNESS)
         except Exception:
             pass
+    return _clamp(level, MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+
+
+def scale_color(rgb, brightness=None):
+    if brightness is not None:
+        level = _clamp(int(round(float(brightness) * 255)), 0, 255)
+    else:
+        level = _ldr_level()
     r, g, b = rgb
     return (
-        _clamp(int(r * brightness), 0, 255),
-        _clamp(int(g * brightness), 0, 255),
-        _clamp(int(b * brightness), 0, 255),
+        _clamp(int(r * level / 255), 0, 255),
+        _clamp(int(g * level / 255), 0, 255),
+        _clamp(int(b * level / 255), 0, 255),
     )
 
 
@@ -192,11 +220,21 @@ def startup_chase():
     paint_all((0, 0, 0))
 
 
+def _metar_id(sid):
+    """AWC wants K + 3-char FAA ids (3D2 -> K3D2, 2P2 -> K2P2)."""
+    sid = str(sid or "").strip().upper()
+    if not sid:
+        return ""
+    if len(sid) == 3:
+        return "K" + sid
+    return sid
+
+
 def unique_stations():
     ids = []
     for lh in lighthouses:
-        sid = str(lh.get("metar", "")).strip().upper()
-        fb = str(lh.get("metar_fallback", "KSUE")).strip().upper()
+        sid = _metar_id(lh.get("metar", ""))
+        fb = _metar_id(lh.get("metar_fallback", "KSUE"))
         if sid and sid not in ids:
             ids.append(sid)
         if fb and fb not in ids:
@@ -271,46 +309,112 @@ def wx_bits(raw_text):
     return bits
 
 
+def _http_get_text(url, timeout=12):
+    gc.collect()
+    resp = urequests.get(url, timeout=timeout)
+    text = resp.text
+    resp.close()
+    gc.collect()
+    return text or ""
+
+
+def _station_from_line(line, wanted):
+    line = line.strip()
+    if not line:
+        return None, None
+    parts = line.split()
+    if not parts:
+        return None, None
+    first = parts[0].upper()
+    if first in ("METAR", "SPECI"):
+        station = parts[1].upper() if len(parts) > 1 else ""
+    else:
+        station = first
+    if station in wanted:
+        return station, line
+    return None, None
+
+
+def _ingest_raw(text, wanted, found):
+    for line in text.split("\n"):
+        station, raw = _station_from_line(line, wanted)
+        if not station:
+            continue
+        found[station] = {
+            "category": _parse_flight_category(raw) or "VFR",
+            "raw": raw,
+            "wx": wx_bits(raw),
+        }
+
+
+def _ingest_xml(text, station, found):
+    rt_start = text.find("<raw_text>")
+    rt_end = text.find("</raw_text>", rt_start)
+    if rt_start < 0 or rt_end < 0:
+        return
+    raw = text[rt_start + 10:rt_end].strip()
+    if not raw:
+        return
+    fc_start = text.find("<flight_category>")
+    fc_end = text.find("</flight_category>", fc_start)
+    category = ""
+    if fc_start >= 0 and fc_end > fc_start:
+        category = text[fc_start + 17:fc_end].strip().upper()
+    found[station] = {
+        "category": category or _parse_flight_category(raw) or "VFR",
+        "raw": raw,
+        "wx": wx_bits(raw),
+    }
+
+
 def fetch_metars():
     ids = unique_stations()
     if not ids:
         return
-    url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=1&format=raw" % ",".join(ids)
+    wanted = {}
+    for sid in ids:
+        wanted[sid] = True
+    found = {}
+    url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=3&format=raw" % ",".join(ids)
     print("Fetch", url)
     try:
-        gc.collect()
-        resp = urequests.get(url, timeout=12)
-        text = resp.text
-        resp.close()
-        gc.collect()
+        _ingest_raw(_http_get_text(url), wanted, found)
     except Exception as e:
-        print("METAR fetch failed:", e)
-        return
-    found = {}
-    for line in text.split("\n"):
-        line = line.strip()
-        if not line or not (line.startswith("METAR ") or line.startswith("SPECI ")):
+        print("METAR bulk failed:", e)
+    missing = [sid for sid in ids if sid not in found]
+    for sid in missing:
+        try:
+            one = "https://aviationweather.gov/api/data/metar?ids=%s&hours=6&format=raw" % sid
+            print("Fetch", sid)
+            _ingest_raw(_http_get_text(one, timeout=10), wanted, found)
+        except Exception as e:
+            print("METAR", sid, "raw failed:", e)
+        if sid in found:
             continue
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-        station = parts[1].upper()
-        found[station] = {
-            "category": _parse_flight_category(line) or "VFR",
-            "raw": line,
-            "wx": wx_bits(line),
-        }
+        try:
+            xml_url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=6&format=xml" % sid
+            _ingest_xml(_http_get_text(xml_url, timeout=10), sid, found)
+            if sid in found:
+                print("Got", sid, "from XML")
+        except Exception as e:
+            print("METAR", sid, "xml failed:", e)
     status["stations"] = found
     status["last_fetch"] = time.time()
+    still = [sid for sid in ids if sid not in found]
     print("Got", len(found), "stations", list(found.keys()))
+    if still:
+        print("No METAR yet:", still)
 
 
 def station_for(lh):
     stations = status.get("stations") or {}
-    primary = str(lh.get("metar", "")).strip().upper()
-    fallback = str(lh.get("metar_fallback", "KSUE")).strip().upper()
+    primary = _metar_id(lh.get("metar", ""))
+    fallback = _metar_id(lh.get("metar_fallback", "KSUE"))
     if primary in stations:
         return stations[primary]
+    raw = str(lh.get("metar", "")).strip().upper()
+    if raw in stations:
+        return stations[raw]
     if fallback in stations:
         return stations[fallback]
     return None
@@ -452,15 +556,27 @@ def render_frame():
     strip.write()
 
 
-def start_http():
-    global http_sock
+def _listen_http(port):
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(("0.0.0.0", 80))
+    s.bind(("0.0.0.0", port))
     s.listen(2)
     s.settimeout(0.02)
-    http_sock = s
-    print("HTTP status on port 80")
+    return s
+
+
+def start_http():
+    global http_sock, http_sock_8080
+    http_sock = _listen_http(80)
+    try:
+        http_sock_8080 = _listen_http(8080)
+        print("HTTP on port 80 and 8080")
+    except Exception as e:
+        http_sock_8080 = None
+        print("HTTP on port 80 (8080 failed:", e, ")")
+    ip = status.get("ip")
+    if ip:
+        print("Open http://%s/  or  http://%s:8080/" % (ip, ip))
 
 
 def lighthouse_payload():
@@ -527,28 +643,64 @@ def read_http(conn):
         return "", ""
 
 
+def _http_send(conn, content_type, body):
+    if isinstance(body, str):
+        body = body.encode()
+    hdr = (
+        "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %d\r\n"
+        "Connection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n"
+        % (content_type, len(body))
+    )
+    data = hdr.encode() + body
+    while data:
+        sent = conn.send(data)
+        if not sent:
+            break
+        data = data[sent:]
+
+
+def _request_path(line):
+    parts = line.split()
+    if len(parts) < 2:
+        return "/"
+    return parts[1].split("?", 1)[0]
+
+
 def handle_http():
-    if http_sock is None:
-        return
-    try:
-        conn, _addr = http_sock.accept()
-    except OSError:
-        return
+    for sock in (http_sock, http_sock_8080):
+        if sock is None:
+            continue
+        try:
+            conn, _addr = sock.accept()
+        except OSError:
+            continue
+        _handle_conn(conn)
+
+
+def _handle_conn(conn):
     try:
         header, req_body = read_http(conn)
         line = header.split("\r\n", 1)[0] if header else ""
-        if line.startswith("GET /lighthouses"):
-            body = json.dumps({"ok": True, "lighthouses": lighthouse_payload()})
-        elif line.startswith("POST /lighthouses"):
+        path = _request_path(line)
+        method = line.split(" ", 1)[0] if line else "GET"
+        if method == "GET" and path == "/catalog":
+            import wifi_manager
+            wifi_manager.send_json_file(conn, "catalog.json", {"ok": False, "lighthouses": []})
+        elif method == "GET" and path == "/lighthouses-defaults":
+            import wifi_manager
+            wifi_manager.send_json_file(conn, "lighthouses_defaults.json", {"ok": False, "lighthouses": []})
+        elif method == "GET" and path == "/lighthouses":
+            _http_send(conn, "application/json", json.dumps({"ok": True, "lighthouses": lighthouse_payload()}))
+        elif method == "POST" and path == "/lighthouses":
             try:
                 payload = json.loads(req_body) if req_body else {}
                 items = payload.get("lighthouses") if isinstance(payload, dict) else payload
                 count = apply_lighthouse_list(items)
-                body = json.dumps({"ok": True, "count": count, "message": "saved"})
+                _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "message": "saved"}))
             except Exception as e:
-                body = json.dumps({"ok": False, "message": str(e)})
-        elif line.startswith("GET /status"):
-            body = json.dumps({
+                _http_send(conn, "application/json", json.dumps({"ok": False, "message": str(e)}))
+        elif method == "GET" and path == "/status":
+            _http_send(conn, "application/json", json.dumps({
                 "ok": True,
                 "name": "GreatLakesLighthouses",
                 "version": FIRMWARE_VERSION,
@@ -556,21 +708,31 @@ def handle_http():
                 "last_fetch": status.get("last_fetch"),
                 "stations": list((status.get("stations") or {}).keys()),
                 "lights": len(lighthouses),
-            })
-        elif line.startswith("GET /config"):
+            }))
+        elif method == "GET" and path == "/config":
             import wifi_manager
             out = wifi_manager.merge_defaults(load_config())
             out.pop("password", None)
             out["ok"] = True
             out["version"] = FIRMWARE_VERSION
             out["name"] = "GreatLakesLighthouses"
-            body = json.dumps(out)
-        elif line.startswith("POST /update-config") or line.startswith("POST /configure"):
+            _http_send(conn, "application/json", json.dumps(out))
+        elif method == "POST" and path in ("/update-config", "/configure"):
+            import wifi_manager
+            is_json = bool(req_body) and req_body.lstrip()[:1] == "{"
             try:
-                payload = json.loads(req_body) if req_body else {}
+                if is_json:
+                    payload = json.loads(req_body) if req_body else {}
+                else:
+                    payload = wifi_manager.parse_body("\r\n\r\n" + (req_body or ""))
+                    if "beacon_pulse" not in payload:
+                        payload["beacon_pulse"] = False
+                    if "sleep_enabled" not in payload:
+                        payload["sleep_enabled"] = False
+                    if "weekend_mode_enabled" not in payload:
+                        payload["weekend_mode_enabled"] = False
                 if not isinstance(payload, dict):
                     raise ValueError("object required")
-                import wifi_manager
                 old_pin = LED_PIN
                 cfg = wifi_manager.merge_defaults(load_config())
                 wifi_manager.apply_fields(cfg, payload)
@@ -578,31 +740,40 @@ def handle_http():
                 load_config()
                 if LED_PIN != old_pin:
                     init_strip()
-                reboot = str(payload.get("reboot", "")).lower() in ("1", "true", "yes")
-                body = json.dumps({"ok": True, "message": "saved", "version": FIRMWARE_VERSION})
+                reboot = (not is_json) or str(payload.get("reboot", "")).lower() in ("1", "true", "yes")
+                if is_json:
+                    _http_send(conn, "application/json", json.dumps({"ok": True, "message": "saved", "version": FIRMWARE_VERSION}))
+                else:
+                    _http_send(conn, "text/html; charset=utf-8", wifi_manager.success_page(True, status.get("ip")))
                 if reboot:
-                    hdr = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n" % len(body)
-                    conn.send(hdr.encode() + body.encode())
                     conn.close()
                     time.sleep(1)
                     machine.reset()
                     return
             except Exception as e:
-                body = json.dumps({"ok": False, "message": str(e)})
-        elif line.startswith("POST /reboot"):
-            body = json.dumps({"ok": True, "message": "rebooting"})
-            hdr = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body)
-            conn.send(hdr.encode() + body.encode())
+                if is_json:
+                    _http_send(conn, "application/json", json.dumps({"ok": False, "message": str(e)}))
+                else:
+                    _http_send(conn, "text/html; charset=utf-8", "<p>Save failed: %s</p>" % e)
+        elif method == "POST" and path == "/reboot":
+            _http_send(conn, "application/json", json.dumps({"ok": True, "message": "rebooting"}))
             conn.close()
             time.sleep(1)
             machine.reset()
             return
+        elif method == "GET" and path in ("/", "/index.html"):
+            import wifi_manager
+            _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page())
+        elif method == "GET" and path == "/favicon.ico":
+            _http_send(conn, "text/plain", "")
         else:
-            body = json.dumps({"ok": True, "see": ["/status", "/lighthouses", "/config"]})
-        hdr = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n" % len(body)
-        conn.send(hdr.encode() + body.encode())
+            _http_send(conn, "application/json", json.dumps({"ok": True, "see": ["/status", "/lighthouses", "/catalog", "/config"]}))
     except Exception as e:
         print("HTTP", e)
+        try:
+            _http_send(conn, "text/plain", "HTTP error: %s" % e)
+        except Exception:
+            pass
     try:
         conn.close()
     except Exception:

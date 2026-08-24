@@ -13,12 +13,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.doorcountylighthouses.data.GPIO_CHOICES
 import com.doorcountylighthouses.data.ISO_WEEKDAY_NAMES
@@ -46,7 +53,6 @@ import com.doorcountylighthouses.pico.PicoConfigApi
 import com.doorcountylighthouses.ui.theme.Amber
 import com.doorcountylighthouses.ui.theme.Fog
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,9 +63,14 @@ fun PicoSettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val api = remember { PicoConfigApi() }
+    var ssid by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var ledPin by remember { mutableIntStateOf(0) }
     var pinMenuExpanded by remember { mutableStateOf(false) }
     var brightness by remember { mutableFloatStateOf(0.18f) }
+    var minBrightness by remember { mutableStateOf("2") }
+    var maxBrightness by remember { mutableFloatStateOf(46f) }
     var timezoneOffsetHours by remember { mutableStateOf("-5") }
     var sleepEnabled by remember { mutableStateOf(false) }
     var sleepAtHour by remember { mutableStateOf("22") }
@@ -80,8 +91,12 @@ fun PicoSettingsScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     fun applyConfig(cfg: PicoConfig) {
+        ssid = cfg.ssid
+        password = ""
         ledPin = cfg.ledPin
         brightness = cfg.brightness
+        minBrightness = cfg.minBrightness.toString()
+        maxBrightness = cfg.maxBrightness.toFloat()
         timezoneOffsetHours = cfg.timezoneOffsetHours.toString()
         sleepEnabled = cfg.sleepEnabled
         sleepAtHour = cfg.sleepAtHour.toString()
@@ -99,8 +114,12 @@ fun PicoSettingsScreen(
     }
 
     fun currentConfig() = PicoConfig(
+        ssid = ssid,
+        password = password,
         ledPin = ledPin,
-        brightness = brightness,
+        brightness = maxBrightness / 255f,
+        minBrightness = minBrightness.toIntOrNull()?.coerceIn(0, 255) ?: 2,
+        maxBrightness = maxBrightness.toInt().coerceIn(1, 255),
         sleepEnabled = sleepEnabled,
         sleepAtHour = sleepAtHour.toIntOrNull() ?: 22,
         sleepAtMinute = sleepAtMinute.toIntOrNull() ?: 0,
@@ -182,6 +201,46 @@ fun PicoSettingsScreen(
             enabled = !isLoading,
             colors = settingsFieldColors(),
         )
+        Text(
+            text = "Home Wi-Fi",
+            style = MaterialTheme.typography.titleSmall,
+            color = Amber,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Text(
+            text = "This is the router the Pico joins for internet — not the GreatLakes-Setup network. Leave password blank to keep the one already saved on the Pico.",
+            style = MaterialTheme.typography.bodySmall,
+            color = Fog,
+        )
+        OutlinedTextField(
+            value = ssid,
+            onValueChange = { ssid = it },
+            label = { Text("SSID") },
+            supportingText = { Text("Home or hotel Wi-Fi name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            colors = settingsFieldColors(),
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            supportingText = { Text("Leave blank to keep the current password") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                    )
+                }
+            },
+            colors = settingsFieldColors(),
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = { loadFromPico() },
@@ -241,14 +300,25 @@ fun PicoSettingsScreen(
         }
 
         Text(
-            text = "Brightness: ${(brightness * 100).roundToInt()}%",
+            text = "Max brightness: ${maxBrightness.toInt()} (bright-room ceiling)",
             style = MaterialTheme.typography.bodyMedium,
         )
         Slider(
-            value = brightness,
-            onValueChange = { brightness = it },
-            valueRange = 0.05f..1f,
+            value = maxBrightness,
+            onValueChange = { maxBrightness = it },
+            valueRange = 2f..255f,
             enabled = !isLoading,
+        )
+        OutlinedTextField(
+            value = minBrightness,
+            onValueChange = { s -> if (s.isEmpty() || s.all { it.isDigit() } && s.toIntOrNull() in 0..255) minBrightness = s },
+            label = { Text("Min brightness (0-255)") },
+            supportingText = { Text("Use 2 in the dark so WS2812 red/white still look right, same as MetarMap.") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            colors = settingsFieldColors(),
         )
 
         Text(

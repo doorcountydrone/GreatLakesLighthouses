@@ -21,7 +21,7 @@
         "period_s": 1.0,
         "on_s": [1.0],
         "off_s": [0.0],
-        "source": "USCG 7-20955 — fixed white (Vega LED, 2019)"
+        "source": "USCG 7-20955 - fixed white (Vega LED, 2019)"
       }
     },
     {
@@ -42,7 +42,7 @@
         "period_s": 6.0,
         "on_s": [3.0],
         "off_s": [3.0],
-        "source": "USCG 7-20975 — isophase red 6s"
+        "source": "USCG 7-20975 - isophase red 6s"
       }
     },
     {
@@ -105,7 +105,7 @@
         "period_s": 6.0,
         "on_s": [3.0],
         "off_s": [3.0],
-        "source": "USCG Light List — isophase white 6s"
+        "source": "USCG Light List - isophase white 6s"
       }
     },
     {
@@ -115,7 +115,7 @@
       "led": 5,
       "lat": 45.1686,
       "lon": -87.2367,
-      "metar": "3D2",
+      "metar": "K3D2",
       "metar_fallback": "KSUE",
       "metar_name": "Ephraim-Gibraltar",
       "water": "Green Bay",
@@ -136,7 +136,7 @@
       "led": 6,
       "lat": 45.2019,
       "lon": -87.3647,
-      "metar": "3D2",
+      "metar": "K3D2",
       "metar_fallback": "KSUE",
       "metar_name": "Ephraim-Gibraltar",
       "water": "Green Bay",
@@ -157,7 +157,7 @@
       "led": 7,
       "lat": 45.0703,
       "lon": -87.1194,
-      "metar": "3D2",
+      "metar": "K3D2",
       "metar_fallback": "KSUE",
       "metar_name": "Ephraim-Gibraltar",
       "water": "Lake Michigan",
@@ -178,7 +178,7 @@
       "led": 8,
       "lat": 45.0675,
       "lon": -87.0975,
-      "metar": "3D2",
+      "metar": "K3D2",
       "metar_fallback": "KSUE",
       "metar_name": "Ephraim-Gibraltar",
       "water": "Lake Michigan",
@@ -189,7 +189,7 @@
         "period_s": 1.0,
         "on_s": [1.0],
         "off_s": [0.0],
-        "source": "Historic 1852–1869 characteristic (fixed white birdcage lantern). Not an active ATON."
+        "source": "Historic 1852-1869 characteristic (fixed white birdcage lantern). Not an active ATON."
       }
     },
     {
@@ -199,7 +199,7 @@
       "led": 9,
       "lat": 45.0881,
       "lon": -87.0478,
-      "metar": "3D2",
+      "metar": "K3D2",
       "metar_fallback": "KSUE",
       "metar_name": "Ephraim-Gibraltar",
       "water": "Lake Michigan",
@@ -210,7 +210,7 @@
         "period_s": 1.0,
         "on_s": [1.0],
         "off_s": [0.0],
-        "source": "USCG — fixed white (third-order Fresnel)"
+        "source": "USCG - fixed white (third-order Fresnel)"
       }
     },
     {
@@ -220,7 +220,7 @@
       "led": 10,
       "lat": 45.3078,
       "lon": -86.9569,
-      "metar": "2P2",
+      "metar": "K2P2",
       "metar_fallback": "KSUE",
       "metar_name": "Washington Island",
       "water": "Death's Door",
@@ -241,7 +241,7 @@
       "led": 11,
       "lat": 45.2842,
       "lon": -86.9197,
-      "metar": "2P2",
+      "metar": "K2P2",
       "metar_fallback": "KSUE",
       "metar_name": "Washington Island",
       "water": "Death's Door",
@@ -252,7 +252,7 @@
         "period_s": 6.0,
         "on_s": [1.0, 1.0],
         "off_s": [1.0, 3.0],
-        "source": "USCG 7-21325 — fl 1s, ec 1s, fl 1s, ec 3s"
+        "source": "USCG 7-21325 - fl 1s, ec 1s, fl 1s, ec 3s"
       }
     },
     {
@@ -262,7 +262,7 @@
       "led": 12,
       "lat": 45.4278,
       "lon": -86.8214,
-      "metar": "2P2",
+      "metar": "K2P2",
       "metar_fallback": "KSUE",
       "metar_name": "Washington Island",
       "water": "Lake Michigan",
