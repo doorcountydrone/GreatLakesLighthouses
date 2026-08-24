@@ -2,7 +2,7 @@
 
 **13 lighthouses** from Kewaunee through Rock Island on a **Raspberry Pi Pico 2 W** NeoPixel strip. Each LED uses that light’s **real color and flash characteristic** (USCG Light List / historic pattern), not weather colors.
 
-The Android app has a **Lake Michigan catalog** (~100 pierheads and lighthouses, with color and flash already filled in). Search and add the ones on *your* strip, then **Save to Pico**. Restore defaults still loads the Kewaunee → Rock Island pack.
+The Android app has a **Lake Michigan catalog** (~100 pierheads and lighthouses, with color and flash already filled in). Search and add the ones on *your* strip, then **Save to Pico**. Restore defaults still loads the Kewaunee → Rock Island pack. The app and the map’s web page both have a **Help** tab.
 
 ## Light characteristics
 

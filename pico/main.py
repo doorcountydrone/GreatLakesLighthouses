@@ -683,7 +683,15 @@ def _handle_conn(conn):
         line = header.split("\r\n", 1)[0] if header else ""
         path = _request_path(line)
         method = line.split(" ", 1)[0] if line else "GET"
-        if method == "GET" and path == "/catalog":
+        if method == "GET" and path == "/help":
+            import wifi_manager
+            wifi_manager.send_static_file(
+                conn,
+                "help.html",
+                "text/html; charset=utf-8",
+                "<p>Copy help.html to the Pico, then reload.</p>",
+            )
+        elif method == "GET" and path == "/catalog":
             import wifi_manager
             wifi_manager.send_json_file(conn, "catalog.json", {"ok": False, "lighthouses": []})
         elif method == "GET" and path == "/lighthouses-defaults":

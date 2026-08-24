@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.doorcountylighthouses.data.loadPicoBaseUrl
 import com.doorcountylighthouses.data.savePicoBaseUrl
+import com.doorcountylighthouses.ui.HelpScreen
 import com.doorcountylighthouses.ui.LighthouseListScreen
 import com.doorcountylighthouses.ui.PicoSettingsScreen
 import com.doorcountylighthouses.ui.theme.Amber
@@ -79,6 +80,11 @@ class MainActivity : ComponentActivity() {
                                 onClick = { selectedTab = 1 },
                                 text = { Text("Pico settings") },
                             )
+                            Tab(
+                                selected = selectedTab == 2,
+                                onClick = { selectedTab = 2 },
+                                text = { Text("Help") },
+                            )
                         }
                         when (selectedTab) {
                             0 -> LighthouseListScreen(
@@ -89,7 +95,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 modifier = Modifier.fillMaxSize(),
                             )
-                            else -> PicoSettingsScreen(
+                            1 -> PicoSettingsScreen(
                                 picoBaseUrl = picoBaseUrl,
                                 onPicoBaseUrlChange = {
                                     picoBaseUrl = it
@@ -97,6 +103,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 modifier = Modifier.fillMaxSize(),
                             )
+                            else -> HelpScreen(modifier = Modifier.fillMaxSize())
                         }
                     }
                 }

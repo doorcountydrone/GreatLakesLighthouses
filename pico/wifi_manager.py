@@ -282,6 +282,26 @@ def send_json_file(conn, path, missing=None):
         send_json(conn, missing if missing is not None else {"ok": False, "lighthouses": []})
 
 
+def send_static_file(conn, path, content_type, missing=""):
+    try:
+        import os
+        size = os.stat(path)[6]
+        hdr = (
+            "HTTP/1.1 200 OK\r\nContent-Type: %s\r\n"
+            "Content-Length: %d\r\nConnection: close\r\n"
+            "Access-Control-Allow-Origin: *\r\n\r\n" % (content_type, size)
+        )
+        _send_all(conn, hdr)
+        with open(path, "rb") as f:
+            while True:
+                chunk = f.read(1024)
+                if not chunk:
+                    break
+                _send_all(conn, chunk)
+    except Exception:
+        send(conn, "200 OK", content_type, missing or "<p>Copy help.html to the Pico.</p>")
+
+
 def send_html(conn, page):
     send(conn, "200 OK", "text/html; charset=utf-8", page)
 
@@ -333,12 +353,14 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 .hit{background:#16324F;border-radius:8px;padding:8px;margin-top:6px}
 .hit.onmap{opacity:.45}
 .status{color:#E8A838;font-size:.85rem;min-height:1.2em}
+#panelSettings,#panelHelp{display:none}
 </style></head><body>
 <h1>Great Lakes Lighthouses</h1>
 <p>Open this page on the Pico (setup: 192.168.4.1, or the Pico LAN IP).</p>
 <div class="tabs">
 <button type="button" id="tabLights" onclick="showTab('lights')">Lighthouses</button>
 <button type="button" id="tabSettings" onclick="showTab('settings')">Pico settings</button>
+<button type="button" id="tabHelp" onclick="showTab('help')">Help</button>
 </div>
 <div id="panelLights">
 <p class="note">List order is LED order (south to north). Skip a light to leave that LED off. Save when the strip matches.</p>
@@ -402,6 +424,9 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <button type="submit">Save &amp; Reboot</button>
 </form>
 </div>
+<div id="panelHelp">
+<iframe src="/help" title="Help" style="width:100%;min-height:75vh;border:0;background:#0B1F3A"></iframe>
+</div>
 <div id="overlay" onclick="if(event.target.id==='overlay')closeModal()">
 <div class="box" id="modalBox"></div>
 </div>
@@ -423,8 +448,10 @@ var PRESETS=[
 function showTab(name){
  document.getElementById('panelLights').style.display=name==='lights'?'block':'none';
  document.getElementById('panelSettings').style.display=name==='settings'?'block':'none';
+ document.getElementById('panelHelp').style.display=name==='help'?'block':'none';
  document.getElementById('tabLights').className=name==='lights'?'on':'';
  document.getElementById('tabSettings').className=name==='settings'?'on':'';
+ document.getElementById('tabHelp').className=name==='help'?'on':'';
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function say(m){document.getElementById('lhStatus').textContent=m||'';}
@@ -686,6 +713,13 @@ def run_server(force_ap=False):
             first = request.split("\r\n", 1)[0] if request else ""
             if first.startswith("GET /status"):
                 send_json(conn, {"ok": True, "mode": "setup", "name": "GreatLakesLighthouses"})
+            elif first.startswith("GET /help"):
+                send_static_file(
+                    conn,
+                    "help.html",
+                    "text/html; charset=utf-8",
+                    "<p>Copy help.html to the Pico, then reload.</p>",
+                )
             elif first.startswith("GET /catalog"):
                 send_json_file(conn, "catalog.json", {"ok": False, "lighthouses": []})
             elif first.startswith("GET /lighthouses-defaults"):
