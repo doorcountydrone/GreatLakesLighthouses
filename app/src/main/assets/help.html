@@ -51,8 +51,8 @@
     <p><strong>Reload</strong> loads the list that is already on the map.</p>
     <p><strong>Save list</strong> sends your list to the map. Do this after you add, skip, reorder, or remove lights.</p>
     <p><strong>Use</strong> / skip: skip leaves that light dark but keeps its place on the strip.</p>
-    <p><strong>Up / Down</strong> move a light. First in the list is the first light on the strip (usually the southernmost).</p>
-    <p><strong>Add from catalog</strong> searches Lake Michigan lights. Color and flash are already filled in. Tap one to add it.</p>
+    <p><strong>Drag the handle</strong> (app) or <strong>Up / Down</strong> (browser) to move a light. First in the list is the first light on the strip (usually the southernmost).</p>
+    <p><strong>Add from catalog</strong> lets you browse by shore (Chicago, Wisconsin, Green Bay, Michigan, Straits) or search by name. Color, flash, and nearest weather station are already filled in. Tap one to add it.</p>
     <p><strong>Add custom</strong> is for a name, a flash pattern, and an optional nearby weather station (for example KSUE).</p>
     <p><strong>Restore defaults</strong> puts back Kewaunee through Rock Island. Then tap Save list.</p>
   </div>
@@ -66,7 +66,12 @@
   <div class="card">
     <h3>Wi-Fi, brightness, and sleep</h3>
     <p><strong>Home Wi-Fi</strong> name and password are for your router, not GreatLakes-Setup. Leave password blank to keep the one already saved.</p>
+    <p><strong>Extra display</strong> is LED strip only, OLED (GPIO 16–19), or LED matrix (GPIO 1). The lighthouse strip is always on. Save &amp; Reboot after you change this.</p>
+    <p><strong>LED matrix scroll</strong> is Weather only (default) or All lights. Weather only lists lights that currently have rain, fog, snow, lightning, or similar. If none do, it scrolls GREAT LAKES LIGHTHOUSES about every 15 seconds. <strong>Matrix scroll speed</strong> is 1 (slow) to 10 (fast). The IP scrolls once at startup.</p>
     <p><strong>Max brightness</strong> is how bright the lights get in a bright room (1 to 30). <strong>Min brightness</strong> should stay at 2 so red and white still look right when the room is dark.</p>
+    <p>Optional OLED (SSD1306): GPIO 16 data (SDA), 17 clock (SCL), 18 for 3.3 V, 19 for ground. Copy ssd1306.py onto the Pico. The screen cycles IP, LDR brightness, and METAR.</p>
+    <p>Optional LED matrix (8x32 WS2812): data on GPIO 1, 5 V and common ground — not from pin 18. Copy led_matrix.py onto the Pico. Light names use flight-category color; weather codes use MetarMap colors (rain cyan, snow/fog white, lightning yellow, wind yellow, storms red).</p>
+    <p><strong>Refresh seconds</strong> is how often the map checks online (30 to 3600). 300 is every 5 minutes.</p>
     <p><strong>Sleep</strong> turns the lights off and on each night. Set the time offset first (Central: -6 in winter, -5 in daylight saving. Eastern: -5 / -4).</p>
     <p><strong>Weekend / long off</strong> is an extra off stretch, for example Friday evening to Monday morning. It works together with nightly sleep.</p>
     <p>On this page, <strong>Save &amp; Reboot</strong> saves settings and restarts the map. That is normal.</p>
@@ -83,9 +88,9 @@
 
   <h2>Using the app</h2>
   <div class="card">
-    <p>The Android app has the same three tabs: Lights, Pico settings, and Help.</p>
+    <p>The Android app has three tabs along the bottom: Lights, Settings, and Help.</p>
     <p>On GreatLakes-Setup, set Pico address to <strong>192.168.4.1</strong>. After the map is on home Wi-Fi, set it to the map's home-network address (for example http://192.168.1.22).</p>
-    <p>Lights tab: <strong>Fetch from Pico</strong> and <strong>Save to Pico</strong>. Pico settings tab: <strong>Fetch</strong>, <strong>Save</strong>, <strong>Save &amp; reboot</strong>, or <strong>Install firmware update</strong>.</p>
+    <p>Lights tab: <strong>Fetch from Pico</strong> and <strong>Save to Pico</strong>. Settings tab: <strong>Fetch</strong>, <strong>Save</strong>, <strong>Save &amp; reboot</strong>, or <strong>Install firmware update</strong>.</p>
   </div>
 
   <h2>Troubleshooting</h2>

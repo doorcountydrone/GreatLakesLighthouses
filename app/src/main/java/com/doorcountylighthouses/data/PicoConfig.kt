@@ -1,6 +1,11 @@
 package com.doorcountylighthouses.data
 
 const val BRIGHTNESS_SLIDER_MAX = 30
+const val CYCLE_DELAY_MIN = 30
+const val CYCLE_DELAY_MAX = 3600
+const val MATRIX_SCROLL_SPEED_MIN = 1
+const val MATRIX_SCROLL_SPEED_MAX = 10
+const val MATRIX_SCROLL_SPEED_DEFAULT = 7
 
 data class PicoConfig(
     val ssid: String = "",
@@ -27,6 +32,9 @@ data class PicoConfig(
     val firmwareVersion: String? = null,
     val updateAvailable: Boolean = false,
     val updateVersion: String? = null,
+    val displayType: String = "NONE",
+    val matrixScroll: String = "WEATHER",
+    val matrixScrollSpeed: Int = MATRIX_SCROLL_SPEED_DEFAULT,
 )
 
 data class GpioChoice(val pin: Int, val label: String)
@@ -34,8 +42,12 @@ data class GpioChoice(val pin: Int, val label: String)
 val GPIO_CHOICES: List<GpioChoice> = (0..28).map { pin ->
     val note = when (pin) {
         0 -> "default strip"
+        1 -> "LED matrix"
         15 -> "setup button"
-        21 -> "LDR drive"
+        16 -> "OLED SDA"
+        17 -> "OLED SCL"
+        18 -> "OLED 3.3V"
+        19 -> "OLED GND"
         23, 24, 25 -> "internal"
         26 -> "LDR"
         else -> null
@@ -45,4 +57,17 @@ val GPIO_CHOICES: List<GpioChoice> = (0..28).map { pin ->
 
 val ISO_WEEKDAY_NAMES = listOf(
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+)
+
+data class DisplayChoice(val id: String, val label: String)
+
+val DISPLAY_CHOICES = listOf(
+    DisplayChoice("NONE", "LED strip only"),
+    DisplayChoice("OLED", "OLED (128×64)"),
+    DisplayChoice("LED_MATRIX", "LED matrix (8×32)"),
+)
+
+val MATRIX_SCROLL_CHOICES = listOf(
+    DisplayChoice("WEATHER", "Weather only"),
+    DisplayChoice("ALL", "All lights"),
 )

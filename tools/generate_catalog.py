@@ -1,10 +1,14 @@
 """Build app catalog from Wikidata Great Lakes lighthouse query (already filtered)."""
 import json
+import math
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WD = Path(__file__).with_name("wikidata_lh.json")
+STATIONS = Path(__file__).with_name("metar_stations.json")
+APP_CATALOG = ROOT / "app" / "src" / "main" / "assets" / "catalog.json"
+PICO_CATALOG = ROOT / "pico" / "catalog.json"
 
 
 def parse_characteristic(raw: str):
@@ -85,6 +89,14 @@ def parse_characteristic(raw: str):
 
 
 def region(lat, lon):
+    # Door County juts east of the rest of the Wisconsin shore, so a single
+    # longitude cutoff puts Sturgeon Bay Canal, Baileys Harbor, Cana Island,
+    # and Death's Door on the Michigan chip. Keep the peninsula and islands
+    # on the Wisconsin side; Minneapolis Shoal / Escanaba stay Michigan.
+    if 44.55 <= lat < 45.50 and lon <= -86.80:
+        if lon <= -87.55:
+            return "Green Bay"
+        return "Wisconsin / Illinois"
     if lon <= -87.55 and lat >= 44.4:
         return "Green Bay"
     if lat >= 45.65 and lon >= -85.7:
@@ -99,6 +111,54 @@ def region(lat, lon):
 def slug(name, lat, lon):
     base = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
     return f"{base}_{int(lat * 10000)}_{int(abs(lon) * 10000)}"
+
+
+def _km(lat1, lon1, lat2, lon2):
+    radius = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlon / 2) ** 2
+    return 2 * radius * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def load_stations():
+    data = json.loads(STATIONS.read_text(encoding="utf-8"))
+    return data.get("stations") or []
+
+
+def nearest_metar(lat, lon, stations):
+    ranked = sorted(stations, key=lambda s: _km(lat, lon, s["lat"], s["lon"]))
+    if not ranked:
+        return {"metar": "", "metar_fallback": "", "metar_name": ""}
+    primary = ranked[0]
+    fallback = ranked[1] if len(ranked) > 1 else ranked[0]
+    return {
+        "metar": primary["icao"],
+        "metar_fallback": fallback["icao"],
+        "metar_name": primary.get("name") or primary["icao"],
+    }
+
+
+def assign_metars(items, stations):
+    for item in items:
+        item.update(nearest_metar(float(item.get("lat") or 0), float(item.get("lon") or 0), stations))
+    return items
+
+
+def write_catalog(items):
+    out = {
+        "version": 2,
+        "area": "Lake Michigan and adjoining waters (Green Bay, Straits approaches)",
+        "notes": "Search catalog in the app, then add lights to your LED list. Each entry includes the nearest METAR station. Not all entries are on the strip.",
+        "count": len(items),
+        "lighthouses": items,
+    }
+    text = json.dumps(out, indent=2)
+    APP_CATALOG.write_text(text, encoding="utf-8")
+    PICO_CATALOG.write_text(text, encoding="utf-8")
+    print("wrote", APP_CATALOG, "and", PICO_CATALOG, "count", len(items))
+    print("regions", {r: sum(1 for i in items if i["region"] == r) for r in sorted({i["region"] for i in items})})
 
 
 def main():
@@ -141,18 +201,19 @@ def main():
         }
 
     items = sorted(seen.values(), key=lambda x: (x["lat"], x["lon"]))
-    out = {
-        "version": 1,
-        "area": "Lake Michigan and adjoining waters (Green Bay, Straits approaches)",
-        "notes": "Search catalog in the app, then add lights to your LED list. Not all entries are on the strip.",
-        "count": len(items),
-        "lighthouses": items,
-    }
-    dest = ROOT / "app" / "src" / "main" / "assets" / "catalog.json"
-    dest.write_text(json.dumps(out, indent=2), encoding="utf-8")
-    print("wrote", dest, "count", len(items))
-    print("regions", {r: sum(1 for i in items if i["region"] == r) for r in sorted({i["region"] for i in items})})
+    assign_metars(items, load_stations())
+    write_catalog(items)
 
 
 if __name__ == "__main__":
-    main()
+    if not WD.exists():
+        stations = load_stations()
+        src = APP_CATALOG if APP_CATALOG.exists() else PICO_CATALOG
+        data = json.loads(src.read_text(encoding="utf-8"))
+        items = data.get("lighthouses") or []
+        for item in items:
+            item["region"] = region(float(item.get("lat") or 0), float(item.get("lon") or 0))
+        assign_metars(items, stations)
+        write_catalog(items)
+    else:
+        main()

@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "area": "Lake Michigan and adjoining waters (Green Bay, Straits approaches)",
-  "notes": "Search catalog in the app, then add lights to your LED list. Not all entries are on the strip.",
+  "notes": "Search catalog in the app, then add lights to your LED list. Each entry includes the nearest METAR station. Not all entries are on the strip.",
   "count": 103,
   "lighthouses": [
     {
@@ -23,7 +23,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KGYY",
+      "metar_fallback": "KIGQ",
+      "metar_name": "Gary Intl"
     },
     {
       "id": "old_michigan_city_light_417227_869058",
@@ -44,7 +47,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KMGC",
+      "metar_fallback": "KPPO",
+      "metar_name": "Michigan City Muni"
     },
     {
       "id": "michigan_city_east_light_417288_869116",
@@ -65,7 +71,10 @@
           1.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMGC",
+      "metar_fallback": "KPPO",
+      "metar_name": "Michigan City Muni"
     },
     {
       "id": "michigan_city_breakwater_light_417299_869138",
@@ -86,7 +95,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMGC",
+      "metar_fallback": "KPPO",
+      "metar_name": "Michigan City Muni"
     },
     {
       "id": "68th_street_crib_light_417863_875313",
@@ -107,7 +119,10 @@
           2.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMDW",
+      "metar_fallback": "KGYY",
+      "metar_name": "Chicago/Midway Intl"
     },
     {
       "id": "four_mile_crib_light_418733_875450",
@@ -128,7 +143,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMDW",
+      "metar_fallback": "KGYY",
+      "metar_name": "Chicago/Midway Intl"
     },
     {
       "id": "chicago_harbor_southeast_guidewall_light_418883_876025",
@@ -149,7 +167,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMDW",
+      "metar_fallback": "KORD",
+      "metar_name": "Chicago/Midway Intl"
     },
     {
       "id": "chicago_harbor_light_418894_875905",
@@ -170,7 +191,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMDW",
+      "metar_fallback": "KORD",
+      "metar_name": "Chicago/Midway Intl"
     },
     {
       "id": "william_e_dever_crib_light_419294_875988",
@@ -191,7 +215,10 @@
           0.7
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMDW",
+      "metar_fallback": "KORD",
+      "metar_name": "Chicago/Midway Intl"
     },
     {
       "id": "wilson_avenue_crib_light_419661_875911",
@@ -212,7 +239,10 @@
           0.7
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMDW",
+      "metar_fallback": "KORD",
+      "metar_name": "Chicago/Midway Intl"
     },
     {
       "id": "grosse_point_light_420638_876761",
@@ -235,7 +265,10 @@
           13.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KPWK",
+      "metar_fallback": "KORD",
+      "metar_name": "Chicago Exec"
     },
     {
       "id": "st_joseph_north_pier_inner_light_421161_864936",
@@ -256,7 +289,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KBEH",
+      "metar_fallback": "KLWA",
+      "metar_name": "Benton Harbor/SW Michigan Rgnl"
     },
     {
       "id": "st_joseph_north_pier_outer_light_421163_864947",
@@ -277,7 +313,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KBEH",
+      "metar_fallback": "KLWA",
+      "metar_name": "Benton Harbor/SW Michigan Rgnl"
     },
     {
       "id": "waukegan_harbor_light_423607_878134",
@@ -298,7 +337,10 @@
           1.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KUGN",
+      "metar_fallback": "KPWK",
+      "metar_name": "Waukegan Rgnl"
     },
     {
       "id": "south_haven_light_424013_862880",
@@ -319,7 +361,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KLWA",
+      "metar_fallback": "KBEH",
+      "metar_name": "South Haven Rgnl"
     },
     {
       "id": "kenosha_north_pier_light_425888_878086",
@@ -340,7 +385,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KENW",
+      "metar_fallback": "KUGN",
+      "metar_name": "Kenosha Rgnl"
     },
     {
       "id": "kenosha_light_425894_878158",
@@ -361,7 +409,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KENW",
+      "metar_fallback": "KUGN",
+      "metar_name": "Kenosha Rgnl"
     },
     {
       "id": "saugatuck_harbour_lighthouse_426769_862158",
@@ -382,7 +433,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KBIV",
+      "metar_fallback": "KLWA",
+      "metar_name": "Holland/Tulip City Arpt"
     },
     {
       "id": "saugatuck_harbor_lights_426833_862166",
@@ -403,7 +457,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KBIV",
+      "metar_fallback": "KLWA",
+      "metar_name": "Holland/Tulip City Arpt"
     },
     {
       "id": "racine_reef_light_427275_877361",
@@ -424,7 +481,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KRAC",
+      "metar_fallback": "KENW",
+      "metar_name": "Racine/Batten Intl"
     },
     {
       "id": "racine_harbor_lighthouse_and_life_saving_station_427340_877787",
@@ -445,7 +505,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KRAC",
+      "metar_fallback": "KENW",
+      "metar_name": "Racine/Batten Intl"
     },
     {
       "id": "racine_north_breakwater_light_427346_877720",
@@ -466,7 +529,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KRAC",
+      "metar_fallback": "KENW",
+      "metar_name": "Racine/Batten Intl"
     },
     {
       "id": "holland_harbor_light_427727_862124",
@@ -487,7 +553,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KBIV",
+      "metar_fallback": "KMKG",
+      "metar_name": "Holland/Tulip City Arpt"
     },
     {
       "id": "wind_point_light_427811_877583",
@@ -508,7 +577,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KRAC",
+      "metar_fallback": "KMKE",
+      "metar_name": "Racine/Batten Intl"
     },
     {
       "id": "milwaukee_pierhead_light_430260_878953",
@@ -529,7 +601,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKE",
+      "metar_fallback": "KMWC",
+      "metar_name": "Milwaukee/Mitchell Intl"
     },
     {
       "id": "milwaukee_breakwater_light_430270_878820",
@@ -550,7 +625,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKE",
+      "metar_fallback": "KMWC",
+      "metar_name": "Milwaukee/Mitchell Intl"
     },
     {
       "id": "grand_haven_south_pierhead_entrance_light_430569_862558",
@@ -571,7 +649,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKG",
+      "metar_fallback": "KBIV",
+      "metar_name": "Muskegon Cnty Arpt"
     },
     {
       "id": "grand_haven_south_pierhead_inner_light_430572_862538",
@@ -592,7 +673,10 @@
           1.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKG",
+      "metar_fallback": "KBIV",
+      "metar_name": "Muskegon Cnty Arpt"
     },
     {
       "id": "grand_haven_north_pierhead_light_430582_862560",
@@ -613,7 +697,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKG",
+      "metar_fallback": "KBIV",
+      "metar_name": "Muskegon Cnty Arpt"
     },
     {
       "id": "north_point_light_430656_878714",
@@ -634,7 +721,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KMKE",
+      "metar_fallback": "KMWC",
+      "metar_name": "Milwaukee/Mitchell Intl"
     },
     {
       "id": "muskegon_breakwater_light_432241_863471",
@@ -655,7 +745,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKG",
+      "metar_fallback": "KFFX",
+      "metar_name": "Muskegon Cnty Arpt"
     },
     {
       "id": "muskegon_south_pierhead_light_432267_863415",
@@ -676,7 +769,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKG",
+      "metar_fallback": "KFFX",
+      "metar_name": "Muskegon Cnty Arpt"
     },
     {
       "id": "kevich_light_433235_878884",
@@ -697,7 +793,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KETB",
+      "metar_fallback": "KMWC",
+      "metar_name": "West Bend Muni"
     },
     {
       "id": "white_river_light_433747_864243",
@@ -718,7 +817,10 @@
           10.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMKG",
+      "metar_fallback": "KFFX",
+      "metar_name": "Muskegon Cnty Arpt"
     },
     {
       "id": "port_washington_breakwater_light_433853_878597",
@@ -739,7 +841,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KETB",
+      "metar_fallback": "KMWC",
+      "metar_name": "West Bend Muni"
     },
     {
       "id": "port_washington_light_433910_878677",
@@ -760,7 +865,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KETB",
+      "metar_fallback": "KMWC",
+      "metar_name": "West Bend Muni"
     },
     {
       "id": "little_sable_point_light_436511_865391",
@@ -781,7 +889,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KLDM",
+      "metar_fallback": "KFFX",
+      "metar_name": "Ludington/Mason Cnty"
     },
     {
       "id": "sheboygan_breakwater_light_437494_876927",
@@ -802,7 +913,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSBM",
+      "metar_fallback": "KMTW",
+      "metar_name": "Sheboygan Cnty Mem"
     },
     {
       "id": "sheboygan_lighthouse_437630_876979",
@@ -823,7 +937,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KSBM",
+      "metar_fallback": "KMTW",
+      "metar_name": "Sheboygan Cnty Mem"
     },
     {
       "id": "pentwater_light_437816_864441",
@@ -844,7 +961,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KLDM",
+      "metar_fallback": "KFFX",
+      "metar_name": "Ludington/Mason Cnty"
     },
     {
       "id": "pentwater_south_pierhead_light_437816_864441",
@@ -865,7 +985,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KLDM",
+      "metar_fallback": "KFFX",
+      "metar_name": "Ludington/Mason Cnty"
     },
     {
       "id": "pentwater_north_pierhead_light_437825_864438",
@@ -886,7 +1009,10 @@
           2.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KLDM",
+      "metar_fallback": "KFFX",
+      "metar_name": "Ludington/Mason Cnty"
     },
     {
       "id": "ludington_light_439536_864694",
@@ -907,7 +1033,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KLDM",
+      "metar_fallback": "KMBL",
+      "metar_name": "Ludington/Mason Cnty"
     },
     {
       "id": "big_sable_point_light_440572_865150",
@@ -928,7 +1057,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KLDM",
+      "metar_fallback": "KMBL",
+      "metar_name": "Ludington/Mason Cnty"
     },
     {
       "id": "manitowoc_breakwater_light_440927_876436",
@@ -949,7 +1081,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMTW",
+      "metar_fallback": "KSBM",
+      "metar_name": "Manitowoc Muni"
     },
     {
       "id": "two_rivers_light_441427_875604",
@@ -970,7 +1105,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMTW",
+      "metar_fallback": "KSBM",
+      "metar_name": "Manitowoc Muni"
     },
     {
       "id": "rawley_point_light_442106_875086",
@@ -991,7 +1129,10 @@
           14.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMTW",
+      "metar_fallback": "KSBM",
+      "metar_name": "Manitowoc Muni"
     },
     {
       "id": "manistee_pierhead_lights_442517_863464",
@@ -1012,7 +1153,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMBL",
+      "metar_fallback": "KLDM",
+      "metar_name": "Manistee/Blacker Arpt"
     },
     {
       "id": "kewaunee_pierhead_lighthouse_444572_874931",
@@ -1033,7 +1177,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMTW",
+      "metar_fallback": "KSUE",
+      "metar_name": "Manitowoc Muni"
     },
     {
       "id": "grassy_island_range_lights_445363_880049",
@@ -1054,7 +1201,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KGRB",
+      "metar_fallback": "KOCQ",
+      "metar_name": "Green Bay/Straubel Intl"
     },
     {
       "id": "long_tail_point_light_445959_879835",
@@ -1075,7 +1225,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KGRB",
+      "metar_fallback": "KOCQ",
+      "metar_name": "Green Bay/Straubel Intl"
     },
     {
       "id": "algoma_pierhead_light_446069_874294",
@@ -1096,7 +1249,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSUE",
+      "metar_fallback": "KOCQ",
+      "metar_name": "Sturgeon Bay/Door Cnty"
     },
     {
       "id": "frankfort_light_446306_862522",
@@ -1117,7 +1273,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KFKS",
+      "metar_fallback": "KMBL",
+      "metar_name": "Frankfort/Dow Mem"
     },
     {
       "id": "green_bay_harbor_entrance_light_446531_879013",
@@ -1138,7 +1297,10 @@
           1.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KOCQ",
+      "metar_fallback": "KGRB",
+      "metar_name": "Oconto/Blake Mem"
     },
     {
       "id": "point_betsie_light_446912_862553",
@@ -1159,7 +1321,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KFKS",
+      "metar_fallback": "KMBL",
+      "metar_name": "Frankfort/Dow Mem"
     },
     {
       "id": "sturgeon_bay_canal_north_pierhead_light_447919_873094",
@@ -1167,7 +1332,7 @@
       "short_name": "Sturgeon Bay Canal North Pierhead",
       "lat": 44.7919,
       "lon": -87.3094,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21005",
       "light": {
         "char": "Fl R 2.5s",
@@ -1180,7 +1345,10 @@
           2.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSUE",
+      "metar_fallback": "K3D2",
+      "metar_name": "Sturgeon Bay/Door Cnty"
     },
     {
       "id": "sturgeon_bay_canal_light_447950_873133",
@@ -1188,7 +1356,7 @@
       "short_name": "Sturgeon Bay Canal",
       "lat": 44.795,
       "lon": -87.3133,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-20995",
       "light": {
         "char": "Fl R 10s",
@@ -1201,7 +1369,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSUE",
+      "metar_fallback": "K3D2",
+      "metar_name": "Sturgeon Bay/Door Cnty"
     },
     {
       "id": "manning_memorial_light_448143_860673",
@@ -1222,7 +1393,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KFKS",
+      "metar_fallback": "KTVC",
+      "metar_name": "Frankfort/Dow Mem"
     },
     {
       "id": "sherwood_point_light_448933_874333",
@@ -1243,7 +1417,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSUE",
+      "metar_fallback": "KMNM",
+      "metar_name": "Sturgeon Bay/Door Cnty"
     },
     {
       "id": "peshtigo_reef_light_449566_875791",
@@ -1264,7 +1441,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSUE",
+      "metar_fallback": "KMNM",
+      "metar_name": "Sturgeon Bay/Door Cnty"
     },
     {
       "id": "mission_point_light_449913_854795",
@@ -1285,7 +1465,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KACB",
+      "metar_fallback": "KTVC",
+      "metar_name": "Bellaire/Antrim Cnty"
     },
     {
       "id": "south_manitou_island_lighthouse_450072_860939",
@@ -1306,7 +1489,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KFKS",
+      "metar_fallback": "KTVC",
+      "metar_name": "Frankfort/Dow Mem"
     },
     {
       "id": "north_manitou_shoal_light_station_450200_859567",
@@ -1327,7 +1513,10 @@
           14.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KTVC",
+      "metar_fallback": "KFKS",
+      "metar_name": "Traverse City/Cherry Capital Arpt"
     },
     {
       "id": "baileys_harbor_light_450558_870969",
@@ -1335,7 +1524,7 @@
       "short_name": "Baileys Harbor",
       "lat": 45.0558,
       "lon": -87.0969,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "",
       "light": {
         "char": "F W",
@@ -1348,7 +1537,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "green_island_light_450563_874929",
@@ -1369,7 +1561,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMNM",
+      "metar_fallback": "KSUE",
+      "metar_name": "Menominee/Twin Cnty"
     },
     {
       "id": "north_manitou_island_light_450630_859640",
@@ -1390,7 +1585,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KTVC",
+      "metar_fallback": "KFKS",
+      "metar_name": "Traverse City/Cherry Capital Arpt"
     },
     {
       "id": "baileys_harbor_directional_light_450698_871193",
@@ -1398,7 +1596,7 @@
       "short_name": "Baileys Harbor Directional",
       "lat": 45.06981,
       "lon": -87.11938,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21228",
       "light": {
         "char": "Fl W 2.5s",
@@ -1411,7 +1609,10 @@
           2.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "baileys_harbor_range_front_light_450702_871197",
@@ -1419,7 +1620,7 @@
       "short_name": "Baileys Harbor Range Front",
       "lat": 45.07028,
       "lon": -87.11972,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21228",
       "light": {
         "char": "F R",
@@ -1432,7 +1633,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "baileys_harbor_range_rear_light_450708_871211",
@@ -1440,7 +1644,7 @@
       "short_name": "Baileys Harbor Range Rear",
       "lat": 45.07083,
       "lon": -87.12111,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21229",
       "light": {
         "char": "F R",
@@ -1453,7 +1657,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "KSUE",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "cana_island_light_450882_870467",
@@ -1461,7 +1668,7 @@
       "short_name": "Cana Island",
       "lat": 45.0883,
       "lon": -87.0467,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21255",
       "light": {
         "char": "F W",
@@ -1474,7 +1681,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "K2P2",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "menominee_pier_light_450972_875858",
@@ -1495,7 +1705,10 @@
           1.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMNM",
+      "metar_fallback": "KSUE",
+      "metar_name": "Menominee/Twin Cnty"
     },
     {
       "id": "eagle_bluff_light_451683_872367",
@@ -1503,7 +1716,7 @@
       "short_name": "Eagle Bluff",
       "lat": 45.1683,
       "lon": -87.2367,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21825",
       "light": {
         "char": "Fl W 6s",
@@ -1516,7 +1729,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "KMNM",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "chambers_island_light_452025_873647",
@@ -1537,7 +1753,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K3D2",
+      "metar_fallback": "KMNM",
+      "metar_name": "Ephraim/Fish Creek"
     },
     {
       "id": "grand_traverse_light_452100_855500",
@@ -1558,7 +1777,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KCVX",
+      "metar_fallback": "KACB",
+      "metar_name": "Charlevoix Muni"
     },
     {
       "id": "pilot_island_light_452843_869195",
@@ -1566,7 +1788,7 @@
       "short_name": "Pilot Island",
       "lat": 45.28439,
       "lon": -86.91958,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21325",
       "light": {
         "char": "Fl(2) W 6s",
@@ -1581,7 +1803,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "K3D2",
+      "metar_name": "Washington Island"
     },
     {
       "id": "plum_island_range_front_light_453037_869549",
@@ -1589,7 +1814,7 @@
       "short_name": "Plum Island Range front light",
       "lat": 45.30375,
       "lon": -86.95497,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "",
       "light": {
         "char": "F W",
@@ -1602,7 +1827,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "K3D2",
+      "metar_name": "Washington Island"
     },
     {
       "id": "plum_island_range_rear_light_453077_869577",
@@ -1610,7 +1838,7 @@
       "short_name": "Plum Island Range rear light",
       "lat": 45.30778,
       "lon": -86.95778,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21310",
       "light": {
         "char": "F R",
@@ -1623,7 +1851,10 @@
           0.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "K3D2",
+      "metar_name": "Washington Island"
     },
     {
       "id": "plum_island_range_lights_453077_869577",
@@ -1631,7 +1862,7 @@
       "short_name": "Plum Island Ranges",
       "lat": 45.30778,
       "lon": -86.95778,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "",
       "light": {
         "char": "F W",
@@ -1644,7 +1875,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "K3D2",
+      "metar_name": "Washington Island"
     },
     {
       "id": "charlevoix_south_pier_light_station_453202_852650",
@@ -1665,7 +1899,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KCVX",
+      "metar_fallback": "KMGN",
+      "metar_name": "Charlevoix Muni"
     },
     {
       "id": "south_fox_island_light_453785_858371",
@@ -1686,7 +1923,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KCVX",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "little_traverse_light_454189_849783",
@@ -1707,7 +1947,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMGN",
+      "metar_fallback": "KPLN",
+      "metar_name": "Harbor Springs Arpt"
     },
     {
       "id": "pottawatomie_light_454277_868283",
@@ -1715,7 +1958,7 @@
       "short_name": "Pottawatomie",
       "lat": 45.42778,
       "lon": -86.82833,
-      "region": "Michigan",
+      "region": "Wisconsin / Illinois",
       "llnr": "7-21425",
       "light": {
         "char": "Fl W 4s",
@@ -1728,7 +1971,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "KESC",
+      "metar_name": "Washington Island"
     },
     {
       "id": "st_martin_island_light_455027_867574",
@@ -1749,7 +1995,10 @@
           0.0
         ],
         "source": "Wikidata (unparsed): Alt W 5s, R 5s"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "KESC",
+      "metar_name": "Washington Island"
     },
     {
       "id": "poverty_island_light_station_455272_866636",
@@ -1770,7 +2019,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "KESC",
+      "metar_name": "Washington Island"
     },
     {
       "id": "minneapolis_shoal_light_station_455361_869983",
@@ -1791,7 +2043,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "K2P2",
+      "metar_fallback": "KESC",
+      "metar_name": "Washington Island"
     },
     {
       "id": "beaver_island_head_light_455763_855725",
@@ -1812,7 +2067,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KCVX",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "peninsula_point_lighthouse_456680_869666",
@@ -1833,7 +2091,10 @@
           29.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KESC",
+      "metar_fallback": "K2P2",
+      "metar_name": "Escanaba/Delta Cnty"
     },
     {
       "id": "ile_aux_galets_456763_851716",
@@ -1854,7 +2115,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KPLN",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "beaver_island_harbor_light_457428_855086",
@@ -1875,7 +2139,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KCVX",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "sand_point_light_457444_870444",
@@ -1896,7 +2163,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KESC",
+      "metar_fallback": "K2P2",
+      "metar_name": "Escanaba/Delta Cnty"
     },
     {
       "id": "grays_reef_light_station_457666_851533",
@@ -1917,7 +2187,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KPLN",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "waugoshance_light_457750_850886",
@@ -1938,7 +2211,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KPLN",
+      "metar_fallback": "KMCD",
+      "metar_name": "Pellston Rgnl"
     },
     {
       "id": "mcgulpin_point_light_457869_847722",
@@ -1959,7 +2235,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMCD",
+      "metar_fallback": "KSLH",
+      "metar_name": "Mackinac Isl Arpt"
     },
     {
       "id": "old_mackinac_point_light_457875_847294",
@@ -1980,7 +2259,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KMCD",
+      "metar_fallback": "KSLH",
+      "metar_name": "Mackinac Isl Arpt"
     },
     {
       "id": "round_island_light_458372_846168",
@@ -2001,7 +2283,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMCD",
+      "metar_fallback": "KSLH",
+      "metar_name": "Mackinac Isl Arpt"
     },
     {
       "id": "squaw_island_light_458405_855869",
@@ -2022,7 +2307,10 @@
           0.0
         ],
         "source": "Characteristic not listed; using steady white until confirmed"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KISQ",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "white_shoal_light_458422_851352",
@@ -2043,7 +2331,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KMCD",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "round_island_passage_light_458433_846150",
@@ -2064,7 +2355,10 @@
           3.5
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMCD",
+      "metar_fallback": "KSLH",
+      "metar_name": "Mackinac Isl Arpt"
     },
     {
       "id": "st_helena_island_light_458549_848633",
@@ -2085,7 +2379,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMCD",
+      "metar_fallback": "KPLN",
+      "metar_name": "Mackinac Isl Arpt"
     },
     {
       "id": "wawatam_lighthouse_458658_847152",
@@ -2106,7 +2403,10 @@
           4.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KMCD",
+      "metar_fallback": "KSLH",
+      "metar_name": "Mackinac Isl Arpt"
     },
     {
       "id": "lansing_shoals_light_station_459033_855616",
@@ -2127,7 +2427,10 @@
           9.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KSJX",
+      "metar_fallback": "KISQ",
+      "metar_name": "Beaver Island Arpt"
     },
     {
       "id": "seul_choix_light_459213_859119",
@@ -2148,7 +2451,10 @@
           5.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KISQ",
+      "metar_fallback": "KP75",
+      "metar_name": "Manistique/Schoolcraft Cnty"
     },
     {
       "id": "manistique_east_breakwater_light_459446_862472",
@@ -2169,7 +2475,10 @@
           3.0
         ],
         "source": "Wikidata / USCG-style characteristic"
-      }
+      },
+      "metar": "KP75",
+      "metar_fallback": "KISQ",
+      "metar_name": "Manistique"
     }
   ]
 }

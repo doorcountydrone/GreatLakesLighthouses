@@ -15,6 +15,9 @@ data class CatalogEntry(
     val periodS: Double,
     val onS: List<Double>,
     val offS: List<Double>,
+    val metar: String = "",
+    val metarFallback: String = "",
+    val metarName: String = "",
 ) {
     fun matches(query: String): Boolean {
         if (query.isBlank()) return true
@@ -22,11 +25,30 @@ data class CatalogEntry(
         return name.lowercase().contains(q) ||
             shortName.lowercase().contains(q) ||
             region.lowercase().contains(q) ||
-            characteristic.lowercase().contains(q)
+            characteristic.lowercase().contains(q) ||
+            metar.lowercase().contains(q) ||
+            metarName.lowercase().contains(q)
     }
 }
 
 object CatalogRepository {
+    const val SHORE_ALL = "*"
+
+    val REGION_ORDER = listOf(
+        "Indiana / Chicago",
+        "Wisconsin / Illinois",
+        "Green Bay",
+        "Michigan",
+        "Straits / North",
+    )
+
+    fun regionChipLabel(region: String): String = when (region) {
+        "Indiana / Chicago" -> "Chicago"
+        "Wisconsin / Illinois" -> "Wisconsin"
+        "Straits / North" -> "Straits"
+        else -> region
+    }
+
     fun load(context: Context): List<CatalogEntry> {
         val json = context.assets.open("catalog.json").bufferedReader().use { it.readText() }
         val root = JSONObject(json)
@@ -54,6 +76,9 @@ object CatalogRepository {
                         periodS = light?.optDouble("period_s", 1.0) ?: 1.0,
                         onS = doubles(light?.optJSONArray("on_s")).ifEmpty { listOf(1.0) },
                         offS = doubles(light?.optJSONArray("off_s")).ifEmpty { listOf(0.0) },
+                        metar = obj.optString("metar"),
+                        metarFallback = obj.optString("metar_fallback"),
+                        metarName = obj.optString("metar_name"),
                     )
                 )
             }
@@ -69,6 +94,9 @@ object CatalogRepository {
             lat = entry.lat,
             lon = entry.lon,
             water = entry.region,
+            metar = entry.metar,
+            metarFallback = entry.metarFallback,
+            metarName = entry.metarName,
             characteristic = entry.characteristic,
             lightColor = entry.lightColor,
             periodS = entry.periodS,

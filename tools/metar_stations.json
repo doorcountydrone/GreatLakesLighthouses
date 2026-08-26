@@ -1,0 +1,504 @@
+{
+  "area": "Lake Michigan METAR stations",
+  "count": 83,
+  "stations": [
+    {
+      "icao": "K06C",
+      "name": "Schaumburg Rgnl",
+      "lat": 41.99236,
+      "lon": -88.1091
+    },
+    {
+      "icao": "K2P2",
+      "name": "Washington Island",
+      "lat": 45.388,
+      "lon": -86.924
+    },
+    {
+      "icao": "K3D2",
+      "name": "Ephraim/Fish Creek",
+      "lat": 45.13483,
+      "lon": -87.18809
+    },
+    {
+      "icao": "K57C",
+      "name": "East Troy Muni",
+      "lat": 42.79715,
+      "lon": -88.36553
+    },
+    {
+      "icao": "K8D4",
+      "name": "Sparta/Miller Arpt",
+      "lat": 43.12949,
+      "lon": -85.67792
+    },
+    {
+      "icao": "KACB",
+      "name": "Bellaire/Antrim Cnty",
+      "lat": 44.98671,
+      "lon": -85.20223
+    },
+    {
+      "icao": "KAMN",
+      "name": "Alma/Gratiot Communi",
+      "lat": 43.32093,
+      "lon": -84.68712
+    },
+    {
+      "icao": "KANQ",
+      "name": "Angola/Tri-State Arpt",
+      "lat": 41.64045,
+      "lon": -85.08516
+    },
+    {
+      "icao": "KARR",
+      "name": "Aurora Muni",
+      "lat": 41.77133,
+      "lon": -88.48146
+    },
+    {
+      "icao": "KATW",
+      "name": "Appleton/Outagamie Cnty",
+      "lat": 44.25194,
+      "lon": -88.52603
+    },
+    {
+      "icao": "KAZO",
+      "name": "Kalamazoo Intl",
+      "lat": 42.22827,
+      "lon": -85.546
+    },
+    {
+      "icao": "KBEH",
+      "name": "Benton Harbor/SW Michigan Rgnl",
+      "lat": 42.12897,
+      "lon": -86.41516
+    },
+    {
+      "icao": "KBFA",
+      "name": "Boyne Falls Arpt",
+      "lat": 45.166,
+      "lon": -84.924
+    },
+    {
+      "icao": "KBIV",
+      "name": "Holland/Tulip City Arpt",
+      "lat": 42.74634,
+      "lon": -86.09678
+    },
+    {
+      "icao": "KBTL",
+      "name": "Battle Creek/Kellogg Fld Arpt",
+      "lat": 42.31192,
+      "lon": -85.24147
+    },
+    {
+      "icao": "KBUU",
+      "name": "Burlington Muni",
+      "lat": 42.69085,
+      "lon": -88.30803
+    },
+    {
+      "icao": "KC09",
+      "name": "Morris Muni",
+      "lat": 41.43166,
+      "lon": -88.41519
+    },
+    {
+      "icao": "KC62",
+      "name": "Kendallville Muni",
+      "lat": 41.47393,
+      "lon": -85.25408
+    },
+    {
+      "icao": "KCAD",
+      "name": "Cadillac/Wexford Cnty",
+      "lat": 44.27846,
+      "lon": -85.42074
+    },
+    {
+      "icao": "KCIU",
+      "name": "Chippewa Cnty Intl",
+      "lat": 46.2531,
+      "lon": -84.47727
+    },
+    {
+      "icao": "KCVX",
+      "name": "Charlevoix Muni",
+      "lat": 45.30395,
+      "lon": -85.26892
+    },
+    {
+      "icao": "KDPA",
+      "name": "Dupage Cnty Arpt",
+      "lat": 41.89641,
+      "lon": -88.25119
+    },
+    {
+      "icao": "KEKM",
+      "name": "Elkhart Muni",
+      "lat": 41.72218,
+      "lon": -86.00004
+    },
+    {
+      "icao": "KENW",
+      "name": "Kenosha Rgnl",
+      "lat": 42.59529,
+      "lon": -87.93833
+    },
+    {
+      "icao": "KESC",
+      "name": "Escanaba/Delta Cnty",
+      "lat": 45.72245,
+      "lon": -87.08931
+    },
+    {
+      "icao": "KETB",
+      "name": "West Bend Muni",
+      "lat": 43.42253,
+      "lon": -88.13263
+    },
+    {
+      "icao": "KEZS",
+      "name": "Shawano Muni",
+      "lat": 44.78705,
+      "lon": -88.56395
+    },
+    {
+      "icao": "KFFX",
+      "name": "Fremont Muni",
+      "lat": 43.44171,
+      "lon": -85.99361
+    },
+    {
+      "icao": "KFKS",
+      "name": "Frankfort/Dow Mem",
+      "lat": 44.62464,
+      "lon": -86.19847
+    },
+    {
+      "icao": "KFLD",
+      "name": "Fond Du Lac Cnty Arpt",
+      "lat": 43.7695,
+      "lon": -88.49074
+    },
+    {
+      "icao": "KFPK",
+      "name": "Charotte/Beach Fld",
+      "lat": 42.57644,
+      "lon": -84.81246
+    },
+    {
+      "icao": "KGLR",
+      "name": "Gaylord Rgnl",
+      "lat": 45.01656,
+      "lon": -84.68943
+    },
+    {
+      "icao": "KGOV",
+      "name": "Grayling",
+      "lat": 44.681,
+      "lon": -84.727
+    },
+    {
+      "icao": "KGRB",
+      "name": "Green Bay/Straubel Intl",
+      "lat": 44.47959,
+      "lon": -88.13704
+    },
+    {
+      "icao": "KGRR",
+      "name": "Grand Rapids Intl",
+      "lat": 42.8821,
+      "lon": -85.52298
+    },
+    {
+      "icao": "KGSH",
+      "name": "Goshen Muni",
+      "lat": 41.52652,
+      "lon": -85.78717
+    },
+    {
+      "icao": "KGYY",
+      "name": "Gary Intl",
+      "lat": 41.61209,
+      "lon": -87.4091
+    },
+    {
+      "icao": "KHAI",
+      "name": "Three Rivers Muni",
+      "lat": 41.95911,
+      "lon": -85.59327
+    },
+    {
+      "icao": "KHTL",
+      "name": "Houghton Lake/Blodgett Mem",
+      "lat": 44.35904,
+      "lon": -84.6739
+    },
+    {
+      "icao": "KIGQ",
+      "name": "Chicago/Lansing Muni",
+      "lat": 41.54125,
+      "lon": -87.52823
+    },
+    {
+      "icao": "KIMT",
+      "name": "Iron Mountain/Ford Arpt",
+      "lat": 45.8134,
+      "lon": -88.11292
+    },
+    {
+      "icao": "KIRS",
+      "name": "Sturgis/Kirsh Muni",
+      "lat": 41.81536,
+      "lon": -85.43762
+    },
+    {
+      "icao": "KISQ",
+      "name": "Manistique/Schoolcraft Cnty",
+      "lat": 45.97288,
+      "lon": -86.17281
+    },
+    {
+      "icao": "KJOT",
+      "name": "Joliet Rgnl",
+      "lat": 41.51755,
+      "lon": -88.17904
+    },
+    {
+      "icao": "KJXN",
+      "name": "Jackson Cnty",
+      "lat": 42.25896,
+      "lon": -84.4589
+    },
+    {
+      "icao": "KJYM",
+      "name": "Hillsdale Muni",
+      "lat": 41.9197,
+      "lon": -84.5853
+    },
+    {
+      "icao": "KLAN",
+      "name": "Lansing/Capital City Arpt",
+      "lat": 42.77611,
+      "lon": -84.59973
+    },
+    {
+      "icao": "KLDM",
+      "name": "Ludington/Mason Cnty",
+      "lat": 43.96143,
+      "lon": -86.41069
+    },
+    {
+      "icao": "KLOT",
+      "name": "Romeoville/Lewis Univ Arpt",
+      "lat": 41.60308,
+      "lon": -88.10167
+    },
+    {
+      "icao": "KLWA",
+      "name": "South Haven Rgnl",
+      "lat": 42.34762,
+      "lon": -86.2578
+    },
+    {
+      "icao": "KMBL",
+      "name": "Manistee/Blacker Arpt",
+      "lat": 44.27139,
+      "lon": -86.23775
+    },
+    {
+      "icao": "KMCD",
+      "name": "Mackinac Isl Arpt",
+      "lat": 45.866,
+      "lon": -84.634
+    },
+    {
+      "icao": "KMDW",
+      "name": "Chicago/Midway Intl",
+      "lat": 41.78412,
+      "lon": -87.75515
+    },
+    {
+      "icao": "KMGC",
+      "name": "Michigan City Muni",
+      "lat": 41.70478,
+      "lon": -86.81833
+    },
+    {
+      "icao": "KMGN",
+      "name": "Harbor Springs Arpt",
+      "lat": 45.42412,
+      "lon": -84.91299
+    },
+    {
+      "icao": "KMKE",
+      "name": "Milwaukee/Mitchell Intl",
+      "lat": 42.95489,
+      "lon": -87.9045
+    },
+    {
+      "icao": "KMKG",
+      "name": "Muskegon Cnty Arpt",
+      "lat": 43.17107,
+      "lon": -86.23685
+    },
+    {
+      "icao": "KMNM",
+      "name": "Menominee/Twin Cnty",
+      "lat": 45.126,
+      "lon": -87.639
+    },
+    {
+      "icao": "KMOP",
+      "name": "Mount Pleasant Muni",
+      "lat": 43.62288,
+      "lon": -84.743
+    },
+    {
+      "icao": "KMTW",
+      "name": "Manitowoc Muni",
+      "lat": 44.13218,
+      "lon": -87.68186
+    },
+    {
+      "icao": "KMWC",
+      "name": "Milwaukee/Timmerman Arpt",
+      "lat": 43.10954,
+      "lon": -88.03432
+    },
+    {
+      "icao": "KOCQ",
+      "name": "Oconto/Blake Mem",
+      "lat": 44.87488,
+      "lon": -87.90841
+    },
+    {
+      "icao": "KOEB",
+      "name": "Coldwater/Branch Cnty",
+      "lat": 41.93081,
+      "lon": -85.05436
+    },
+    {
+      "icao": "KORD",
+      "name": "Chicago/O'Hare Intl",
+      "lat": 41.96017,
+      "lon": -87.93161
+    },
+    {
+      "icao": "KOSH",
+      "name": "Oshkosh/Wittman Rgnl",
+      "lat": 43.96695,
+      "lon": -88.5582
+    },
+    {
+      "icao": "KP75",
+      "name": "Manistique",
+      "lat": 45.95,
+      "lon": -86.23
+    },
+    {
+      "icao": "KPLN",
+      "name": "Pellston Rgnl",
+      "lat": 45.56441,
+      "lon": -84.7929
+    },
+    {
+      "icao": "KPPO",
+      "name": "La Porte Muni",
+      "lat": 41.57049,
+      "lon": -86.73334
+    },
+    {
+      "icao": "KPWK",
+      "name": "Chicago Exec",
+      "lat": 42.12076,
+      "lon": -87.9048
+    },
+    {
+      "icao": "KRAC",
+      "name": "Racine/Batten Intl",
+      "lat": 42.75857,
+      "lon": -87.8178
+    },
+    {
+      "icao": "KRMY",
+      "name": "Marshall/Brooks Fld",
+      "lat": 42.25238,
+      "lon": -84.95259
+    },
+    {
+      "icao": "KRQB",
+      "name": "Big Rapids/Roben Hood Arpt",
+      "lat": 43.722,
+      "lon": -85.498
+    },
+    {
+      "icao": "KSBM",
+      "name": "Sheboygan Cnty Mem",
+      "lat": 43.77479,
+      "lon": -87.84902
+    },
+    {
+      "icao": "KSBN",
+      "name": "South Bend Rgnl",
+      "lat": 41.70722,
+      "lon": -86.31629
+    },
+    {
+      "icao": "KSJX",
+      "name": "Beaver Island Arpt",
+      "lat": 45.69285,
+      "lon": -85.56624
+    },
+    {
+      "icao": "KSLH",
+      "name": "Cheboygan Cnty Arpt",
+      "lat": 45.6523,
+      "lon": -84.52021
+    },
+    {
+      "icao": "KSUE",
+      "name": "Sturgeon Bay/Door Cnty",
+      "lat": 44.847,
+      "lon": -87.425
+    },
+    {
+      "icao": "KTEW",
+      "name": "Mason/Jewett Fld",
+      "lat": 42.56356,
+      "lon": -84.42225
+    },
+    {
+      "icao": "KTVC",
+      "name": "Traverse City/Cherry Capital Arpt",
+      "lat": 44.73903,
+      "lon": -85.56942
+    },
+    {
+      "icao": "KUES",
+      "name": "Waukesha Cnty",
+      "lat": 43.04249,
+      "lon": -88.24652
+    },
+    {
+      "icao": "KUGN",
+      "name": "Waukegan Rgnl",
+      "lat": 42.42546,
+      "lon": -87.8634
+    },
+    {
+      "icao": "KVPZ",
+      "name": "Valparaiso/Port Cnty",
+      "lat": 41.45348,
+      "lon": -86.998
+    },
+    {
+      "icao": "KY70",
+      "name": "Ionia Cnty Arpt",
+      "lat": 42.93975,
+      "lon": -85.06526
+    }
+  ]
+}

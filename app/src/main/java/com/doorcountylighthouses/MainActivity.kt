@@ -7,12 +7,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +36,7 @@ import com.doorcountylighthouses.ui.LighthouseListScreen
 import com.doorcountylighthouses.ui.PicoSettingsScreen
 import com.doorcountylighthouses.ui.theme.Amber
 import com.doorcountylighthouses.ui.theme.DoorCountyLighthousesTheme
+import com.doorcountylighthouses.ui.theme.Fog
 import com.doorcountylighthouses.ui.theme.Navy
 import kotlinx.coroutines.delay
 
@@ -55,58 +61,69 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 } else {
-                val context = LocalContext.current.applicationContext
-                var selectedTab by remember { mutableIntStateOf(0) }
-                var picoBaseUrl by remember { mutableStateOf(loadPicoBaseUrl(context)) }
-                Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Navy),
-                    containerColor = Navy,
-                ) { innerPadding ->
-                    Column(modifier = Modifier.padding(innerPadding)) {
-                        TabRow(
-                            selectedTabIndex = selectedTab,
-                            containerColor = Navy,
-                            contentColor = Amber,
-                        ) {
-                            Tab(
-                                selected = selectedTab == 0,
-                                onClick = { selectedTab = 0 },
-                                text = { Text("Lights") },
-                            )
-                            Tab(
-                                selected = selectedTab == 1,
-                                onClick = { selectedTab = 1 },
-                                text = { Text("Pico settings") },
-                            )
-                            Tab(
-                                selected = selectedTab == 2,
-                                onClick = { selectedTab = 2 },
-                                text = { Text("Help") },
-                            )
-                        }
-                        when (selectedTab) {
-                            0 -> LighthouseListScreen(
-                                picoBaseUrl = picoBaseUrl,
-                                onPicoBaseUrlChange = {
-                                    picoBaseUrl = it
-                                    savePicoBaseUrl(context, it)
-                                },
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                            1 -> PicoSettingsScreen(
-                                picoBaseUrl = picoBaseUrl,
-                                onPicoBaseUrlChange = {
-                                    picoBaseUrl = it
-                                    savePicoBaseUrl(context, it)
-                                },
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                            else -> HelpScreen(modifier = Modifier.fillMaxSize())
+                    val context = LocalContext.current.applicationContext
+                    var selectedTab by remember { mutableIntStateOf(0) }
+                    var picoBaseUrl by remember { mutableStateOf(loadPicoBaseUrl(context)) }
+                    val navColors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Navy,
+                        selectedTextColor = Amber,
+                        indicatorColor = Amber,
+                        unselectedIconColor = Fog,
+                        unselectedTextColor = Fog,
+                    )
+                    Scaffold(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Navy),
+                        containerColor = Navy,
+                        bottomBar = {
+                            NavigationBar(containerColor = Navy, contentColor = Amber) {
+                                NavigationBarItem(
+                                    selected = selectedTab == 0,
+                                    onClick = { selectedTab = 0 },
+                                    icon = { Icon(Icons.Filled.Lightbulb, contentDescription = "Lights") },
+                                    label = { Text("Lights") },
+                                    colors = navColors,
+                                )
+                                NavigationBarItem(
+                                    selected = selectedTab == 1,
+                                    onClick = { selectedTab = 1 },
+                                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                                    label = { Text("Settings") },
+                                    colors = navColors,
+                                )
+                                NavigationBarItem(
+                                    selected = selectedTab == 2,
+                                    onClick = { selectedTab = 2 },
+                                    icon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Help") },
+                                    label = { Text("Help") },
+                                    colors = navColors,
+                                )
+                            }
+                        },
+                    ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding)) {
+                            when (selectedTab) {
+                                0 -> LighthouseListScreen(
+                                    picoBaseUrl = picoBaseUrl,
+                                    onPicoBaseUrlChange = {
+                                        picoBaseUrl = it
+                                        savePicoBaseUrl(context, it)
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                1 -> PicoSettingsScreen(
+                                    picoBaseUrl = picoBaseUrl,
+                                    onPicoBaseUrlChange = {
+                                        picoBaseUrl = it
+                                        savePicoBaseUrl(context, it)
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                else -> HelpScreen(modifier = Modifier.fillMaxSize())
+                            }
                         }
                     }
-                }
                 }
             }
         }

@@ -1,6 +1,8 @@
 package com.doorcountylighthouses.pico
 
 import com.doorcountylighthouses.data.BRIGHTNESS_SLIDER_MAX
+import com.doorcountylighthouses.data.CYCLE_DELAY_MAX
+import com.doorcountylighthouses.data.CYCLE_DELAY_MIN
 import com.doorcountylighthouses.data.PicoConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -217,9 +219,13 @@ class PicoConfigApi {
         val password = config.password
         if (password.isNotEmpty()) put("password", password)
         put("led_pin", config.ledPin.coerceIn(0, 28))
+        put("display_type", config.displayType)
+        put("matrix_scroll", config.matrixScroll)
+        put("matrix_scroll_speed", config.matrixScrollSpeed.coerceIn(1, 10))
         put("min_brightness", config.minBrightness.coerceIn(0, BRIGHTNESS_SLIDER_MAX))
         put("max_brightness", config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX))
         put("brightness", (config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX) / 255.0).coerceIn(0.02, 1.0))
+        put("cycle_delay", config.cycleDelay.coerceIn(CYCLE_DELAY_MIN, CYCLE_DELAY_MAX))
         put("sleep_enabled", config.sleepEnabled)
         put("sleep_at_hour", config.sleepAtHour.coerceIn(0, 23))
         put("sleep_at_minute", config.sleepAtMinute.coerceIn(0, 59))
@@ -240,6 +246,13 @@ class PicoConfigApi {
         ssid = json.optString("ssid").orEmpty(),
         password = "",
         ledPin = json.intLoose("led_pin", 0).coerceIn(0, 28),
+        displayType = json.optString("display_type", "NONE").uppercase().let { raw ->
+            if (raw in setOf("NONE", "OLED", "LED_MATRIX")) raw else "NONE"
+        },
+        matrixScroll = json.optString("matrix_scroll", "WEATHER").uppercase().let { raw ->
+            if (raw in setOf("WEATHER", "ALL")) raw else "WEATHER"
+        },
+        matrixScrollSpeed = json.intLoose("matrix_scroll_speed", 7).coerceIn(1, 10),
         brightness = json.floatLoose("brightness", 0.18f).coerceIn(0.02f, 1f),
         minBrightness = json.intLoose("min_brightness", 2).coerceIn(0, BRIGHTNESS_SLIDER_MAX),
         maxBrightness = run {
@@ -247,7 +260,7 @@ class PicoConfigApi {
             (fromMax ?: (json.floatLoose("brightness", 0.18f) * 255f).toInt()).coerceIn(1, BRIGHTNESS_SLIDER_MAX)
         },
         numLeds = json.intLoose("num_leds", 13),
-        cycleDelay = json.intLoose("cycle_delay", 300),
+        cycleDelay = json.intLoose("cycle_delay", 300).coerceIn(CYCLE_DELAY_MIN, CYCLE_DELAY_MAX),
         sleepEnabled = json.optBoolean("sleep_enabled", false),
         sleepAtHour = json.intLoose("sleep_at_hour", 22).coerceIn(0, 23),
         sleepAtMinute = json.intLoose("sleep_at_minute", 0).coerceIn(0, 59),

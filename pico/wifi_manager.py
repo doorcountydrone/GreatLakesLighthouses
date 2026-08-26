@@ -13,6 +13,9 @@ FORCE_AP_BUTTON_PIN = 15
 AP_IDLE_REBOOT_S = 480
 DEFAULT_LED_PIN = 0
 DEFAULT_NUM_LEDS = 13
+DEFAULT_DISPLAY_TYPE = "NONE"
+DEFAULT_MATRIX_SCROLL = "WEATHER"
+DEFAULT_MATRIX_SCROLL_SPEED = 7
 DEFAULT_BRIGHTNESS = 0.18
 STARTUP_BRIGHTNESS = 0.2
 BRIGHTNESS_CAP = 30
@@ -34,10 +37,23 @@ DEFAULT_SLEEP = {
 }
 
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+DISPLAY_TYPES = (
+    ("NONE", "LED strip only"),
+    ("OLED", "OLED (128x64)"),
+    ("LED_MATRIX", "LED matrix (8x32)"),
+)
+MATRIX_SCROLL_TYPES = (
+    ("WEATHER", "Weather only"),
+    ("ALL", "All lights"),
+)
 GPIO_NOTES = {
     0: " (default)",
+    1: " (LED matrix)",
     15: " (setup button)",
-    21: " (LDR drive)",
+    16: " (OLED SDA)",
+    17: " (OLED SCL)",
+    18: " (OLED 3.3V)",
+    19: " (OLED GND)",
     23: " (internal)",
     24: " (internal)",
     25: " (internal)",
@@ -147,6 +163,20 @@ def _as_bool(v):
     return str(v).lower() in ("1", "on", "true", "yes")
 
 
+def _as_display_type(v):
+    s = str(v or "").strip().upper()
+    if s in ("OLED", "LED_MATRIX", "NONE"):
+        return s
+    return DEFAULT_DISPLAY_TYPE
+
+
+def _as_matrix_scroll(v):
+    s = str(v or "").strip().upper()
+    if s in ("WEATHER", "ALL"):
+        return s
+    return DEFAULT_MATRIX_SCROLL
+
+
 def apply_fields(cfg, src):
     if src.get("ssid"):
         cfg["ssid"] = str(src["ssid"])
@@ -156,6 +186,10 @@ def apply_fields(cfg, src):
         cfg["num_leds"] = _clamp(int(src["num_leds"]), 1, 300)
     if "led_pin" in src and str(src["led_pin"]) != "":
         cfg["led_pin"] = _clamp(int(src["led_pin"]), 0, 28)
+    if "display_type" in src and str(src["display_type"]) != "":
+        cfg["display_type"] = _as_display_type(src["display_type"])
+    if "matrix_scroll" in src and str(src["matrix_scroll"]) != "":
+        cfg["matrix_scroll"] = _as_matrix_scroll(src["matrix_scroll"])
     if "min_brightness" in src and str(src["min_brightness"]) != "":
         cfg["min_brightness"] = _clamp(int(float(src["min_brightness"])), 0, BRIGHTNESS_CAP)
     if "max_brightness" in src and str(src["max_brightness"]) != "":
@@ -177,6 +211,7 @@ def apply_fields(cfg, src):
         ("wake_at_minute", 0, 59),
         ("timezone_offset_hours", -12, 14),
         ("cycle_delay", 30, 3600),
+        ("matrix_scroll_speed", 1, 10),
         ("weekend_off_weekday", 0, 6),
         ("weekend_off_hour", 0, 23),
         ("weekend_off_minute", 0, 59),
@@ -187,6 +222,24 @@ def apply_fields(cfg, src):
         if key in src and str(src[key]) != "":
             cfg[key] = _clamp(int(float(src[key])), lo, hi)
     return cfg
+
+
+def display_options(selected):
+    sel = _as_display_type(selected)
+    parts = []
+    for value, label in DISPLAY_TYPES:
+        mark = " selected" if value == sel else ""
+        parts.append('<option value="%s"%s>%s</option>' % (value, mark, label))
+    return "".join(parts)
+
+
+def matrix_scroll_options(selected):
+    sel = _as_matrix_scroll(selected)
+    parts = []
+    for value, label in MATRIX_SCROLL_TYPES:
+        mark = " selected" if value == sel else ""
+        parts.append('<option value="%s"%s>%s</option>' % (value, mark, label))
+    return "".join(parts)
 
 
 def gpio_options(selected):
@@ -213,6 +266,9 @@ def merge_defaults(cfg):
         "password": "",
         "num_leds": DEFAULT_NUM_LEDS,
         "led_pin": DEFAULT_LED_PIN,
+        "display_type": DEFAULT_DISPLAY_TYPE,
+        "matrix_scroll": DEFAULT_MATRIX_SCROLL,
+        "matrix_scroll_speed": DEFAULT_MATRIX_SCROLL_SPEED,
         "brightness": DEFAULT_BRIGHTNESS,
         "min_brightness": 2,
         "max_brightness": _clamp(int(round(DEFAULT_BRIGHTNESS * 255)), 1, BRIGHTNESS_CAP),
@@ -227,6 +283,12 @@ def merge_defaults(cfg):
     except Exception:
         out["max_brightness"] = 18
         out["min_brightness"] = 2
+    out["display_type"] = _as_display_type(out.get("display_type", DEFAULT_DISPLAY_TYPE))
+    out["matrix_scroll"] = _as_matrix_scroll(out.get("matrix_scroll", DEFAULT_MATRIX_SCROLL))
+    try:
+        out["matrix_scroll_speed"] = _clamp(int(out.get("matrix_scroll_speed", DEFAULT_MATRIX_SCROLL_SPEED)), 1, 10)
+    except Exception:
+        out["matrix_scroll_speed"] = DEFAULT_MATRIX_SCROLL_SPEED
     return out
 
 
@@ -337,6 +399,7 @@ h1{font-size:1.3rem;color:#E8A838}
 h2{font-size:1rem;color:#E8A838;margin-top:18px}
 label{display:block;margin-top:10px;font-size:.9rem}
 input,select{width:100%;box-sizing:border-box;padding:8px;margin-top:4px;border-radius:6px;border:0}
+input[type=range]{padding:0;height:28px;accent-color:#E8A838}
 .row{display:flex;gap:8px}.row>div{flex:1}
 button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;border-radius:8px;font-weight:bold;color:#0B1F3A}
 .note{font-size:.8rem;color:#A8B5C4;margin-top:12px}
@@ -356,6 +419,9 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 .use input{width:auto;margin:0}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);padding:16px;overflow:auto;z-index:2}
 #overlay .box{background:#0B1F3A;border:1px solid #E8A838;border-radius:10px;padding:16px;max-width:520px;margin:20px auto}
+#catChips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+#catChips .chip{width:auto;margin:0;padding:6px 10px;background:#16324F;color:#F4EBD0;border-radius:999px;font-size:.8rem;font-weight:normal}
+#catChips .chip.on{background:#E8A838;color:#0B1F3A}
 #catList{max-height:50vh;overflow:auto}
 .hit{background:#16324F;border-radius:8px;padding:8px;margin-top:6px}
 .hit.onmap{opacity:.45}
@@ -392,6 +458,15 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <label>Password</label>
 <input name="password" type="password" value="" placeholder="Leave blank to keep the current password" autocomplete="off">
 <p class="note">SSID and password are for the Pico to join your router, not for the GreatLakes-Setup network.</p>
+<label>Extra display</label>
+<select name="display_type">__DISPLAY_OPTS__</select>
+<p class="note">LED strip is always on. Add an OLED (GPIO 16-19) or an 8x32 matrix (GPIO 1), or leave strip only.</p>
+<label>LED matrix scroll</label>
+<select name="matrix_scroll">__SCROLL_OPTS__</select>
+<p class="note">Used when Extra display is LED matrix. IP scrolls once at startup. Weather only lists lights with rain, fog, snow, or lightning. If none, GREAT LAKES LIGHTHOUSES scrolls about every 15 seconds.</p>
+<label>Matrix scroll speed <span id="spdN">__SCROLL_SPD__</span></label>
+<input name="matrix_scroll_speed" type="range" min="1" max="10" value="__SCROLL_SPD__" oninput="document.getElementById('spdN').textContent=this.value">
+<p class="note">1 is slow, 10 is fast. 7 matches the original speed.</p>
 <div class="row">
 <div><label>LED count</label><input name="num_leds" type="number" min="1" max="300" value="__NUM_LEDS__"></div>
 <div><label>Strip data pin</label><select name="led_pin">__GPIO_OPTS__</select></div>
@@ -443,7 +518,7 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <div class="box" id="modalBox"></div>
 </div>
 <script>
-var lights=[], catalog=null;
+var lights=[], catalog=null, catShore=null, catQuery='';
 var PRESETS=[
 {char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0],label:'F W - steady white'},
 {char:'F R',color:'R',period_s:1,on_s:[1],off_s:[0],label:'F R - steady red'},
@@ -533,31 +608,54 @@ function onMap(entry){
 function openCatalog(){
  document.getElementById('modalBox').innerHTML='<h2>Lake Michigan catalog</h2><p class="note">Loading...</p>';
  document.getElementById('overlay').style.display='block';
+ var SHORES=[['Chicago','Indiana / Chicago'],['Wisconsin','Wisconsin / Illinois'],['Green Bay','Green Bay'],['Michigan','Michigan'],['Straits','Straits / North']];
  function paint(q){
-  q=(q||'').toLowerCase();
+  catQuery=q||'';
+  q=catQuery.toLowerCase();
   var hits=(catalog||[]).filter(function(e){
+   if(catShore&&catShore!=='*'&&(e.region||'')!==catShore) return false;
    if(!q) return true;
-   return (e.name||'').toLowerCase().indexOf(q)>=0||(e.short_name||'').toLowerCase().indexOf(q)>=0||(e.region||'').toLowerCase().indexOf(q)>=0||((e.light&&e.light.char)||'').toLowerCase().indexOf(q)>=0;
+   return (e.name||'').toLowerCase().indexOf(q)>=0||(e.short_name||'').toLowerCase().indexOf(q)>=0||(e.region||'').toLowerCase().indexOf(q)>=0||((e.light&&e.light.char)||'').toLowerCase().indexOf(q)>=0||(e.metar||'').toLowerCase().indexOf(q)>=0||(e.metar_name||'').toLowerCase().indexOf(q)>=0;
   });
-  var html='<h2>Lake Michigan catalog</h2><label>Search</label><input id="catQ" value="'+esc(q)+'" placeholder="Grand Haven, St. Joseph, Point Betsie">';
-  html+='<p class="note">'+hits.length+' of '+(catalog||[]).length+'</p><div id="catList">';
-  hits.forEach(function(e,idx){
-   var used=onMap(e);
-   html+='<div class="hit'+(used?' onmap':'')+'" data-i="'+idx+'"><b>'+esc(e.name)+'</b><div class="amber">'+esc((e.light&&e.light.char)||'')+' · '+esc(e.region||'')+'</div>';
+  var show=q||catShore;
+  var html='<h2>Lake Michigan catalog</h2><div id="catChips">';
+  html+='<button type="button" class="chip'+(catShore==='*'?' on':'')+'" data-r="*">All '+(catalog||[]).length+'</button>';
+  SHORES.forEach(function(s){
+   var n=(catalog||[]).filter(function(e){return e.region===s[1];}).length;
+   if(!n) return;
+   html+='<button type="button" class="chip'+(catShore===s[1]?' on':'')+'" data-r="'+s[1]+'">'+s[0]+' '+n+'</button>';
+  });
+  html+='</div><label>Search</label><input id="catQ" value="'+esc(catQuery)+'" placeholder="Grand Haven, St. Joseph, Point Betsie">';
+  if(!show){
+   html+='<p class="note">Tap a shore to browse, or search by name.</p>';
+  }else{
+   html+='<p class="note">'+hits.length+(catShore&&catShore!=='*'?' on this shore':' of '+(catalog||[]).length)+'</p><div id="catList">';
+   hits.forEach(function(e,idx){
+    var used=onMap(e);
+    html+='<div class="hit'+(used?' onmap':'')+'" data-i="'+idx+'"><b>'+esc(e.name)+'</b><div class="amber">'+esc((e.light&&e.light.char)||'')+' · '+esc(e.region||'')+(e.metar?' · '+esc(e.metar):'')+'</div>';
     html+=used?'<div class="muted">Already on this map</div>':'<div class="muted">Tap to add</div>';
+    html+='</div>';
+   });
    html+='</div>';
-  });
-  html+='</div><button type="button" onclick="closeModal()">Done</button>';
+  }
+  html+='<button type="button" onclick="closeModal()">Done</button>';
   document.getElementById('modalBox').innerHTML=html;
   var box=document.getElementById('modalBox');
   box._hits=hits;
   document.getElementById('catQ').oninput=function(){paint(this.value);};
-  document.getElementById('catList').onclick=function(ev){
+  document.getElementById('catChips').onclick=function(ev){
+   var b=ev.target.closest('.chip'); if(!b) return;
+   var r=b.getAttribute('data-r');
+   catShore=(catShore===r)?null:r;
+   paint(document.getElementById('catQ').value);
+  };
+  var list=document.getElementById('catList');
+  if(list) list.onclick=function(ev){
    var row=ev.target.closest('.hit'); if(!row||row.className.indexOf('onmap')>=0) return;
    addCatalog(box._hits[parseInt(row.getAttribute('data-i'),10)]);
   };
  }
- if(catalog){paint(''); return;}
+ if(catalog){paint(catQuery); return;}
  getJson('/catalog',function(data){
   catalog=items(data);
   if(!catalog.length){document.getElementById('modalBox').innerHTML='<h2>Catalog</h2><p class="note">Copy catalog.json to the Pico (same folder as main.py), then reload.</p><button type="button" onclick="closeModal()">Close</button>'; return;}
@@ -566,7 +664,7 @@ function openCatalog(){
 }
 function addCatalog(e){
  if(!e||onMap(e)) return;
- lights.push({id:e.id,name:e.name,short_name:e.short_name||e.name,led:lights.length,lat:e.lat||0,lon:e.lon||0,metar:e.metar||'',metar_fallback:e.metar_fallback||'',water:e.region||'',active:true,skip:false,light:e.light||{char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0]}});
+ lights.push({id:e.id,name:e.name,short_name:e.short_name||e.name,led:lights.length,lat:e.lat||0,lon:e.lon||0,metar:e.metar||'',metar_fallback:e.metar_fallback||'',metar_name:e.metar_name||'',water:e.region||'',active:true,skip:false,light:e.light||{char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0]}});
  render(); say('Added '+e.name); openCatalog();
 }
 function openCustom(){
@@ -591,6 +689,9 @@ loadLights();
     page = page.replace("__SSID__", _html_attr(cfg.get("ssid", "")))
     page = page.replace("__NUM_LEDS__", _html_attr(cfg.get("num_leds", DEFAULT_NUM_LEDS)))
     page = page.replace("__GPIO_OPTS__", gpio_options(cfg.get("led_pin", DEFAULT_LED_PIN)))
+    page = page.replace("__DISPLAY_OPTS__", display_options(cfg.get("display_type", DEFAULT_DISPLAY_TYPE)))
+    page = page.replace("__SCROLL_OPTS__", matrix_scroll_options(cfg.get("matrix_scroll", DEFAULT_MATRIX_SCROLL)))
+    page = page.replace("__SCROLL_SPD__", _html_attr(cfg.get("matrix_scroll_speed", DEFAULT_MATRIX_SCROLL_SPEED)))
     max_b = cfg.get("max_brightness")
     if max_b is None:
         max_b = int(round(float(cfg.get("brightness", DEFAULT_BRIGHTNESS)) * 255))
