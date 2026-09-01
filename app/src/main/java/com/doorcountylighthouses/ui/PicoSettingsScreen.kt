@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -115,7 +116,7 @@ fun PicoSettingsScreen(
     var wifiOpen by remember { mutableStateOf(true) }
     var brightnessOpen by remember { mutableStateOf(false) }
     var sleepOpen by remember { mutableStateOf(false) }
-    var updateOpen by remember { mutableStateOf(false) }
+    var updateOpen by remember { mutableStateOf(true) }
 
     fun applyConfig(cfg: PicoConfig) {
         ssid = cfg.ssid
@@ -236,6 +237,18 @@ fun PicoSettingsScreen(
             text = "Settings",
             style = MaterialTheme.typography.headlineSmall,
             color = Amber,
+        )
+        Text(
+            text = when {
+                firmwareVersion == null -> "Pico firmware: Fetch to load"
+                updateAvailable ->
+                    "Pico firmware v$firmwareVersion — update available" +
+                        (updateVersion?.let { " v$it" } ?: "")
+                else -> "Pico firmware v$firmwareVersion — up to date"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            color = if (updateAvailable) Amber else Fog,
+            fontWeight = FontWeight.SemiBold,
         )
         OutlinedTextField(
             value = picoBaseUrl,

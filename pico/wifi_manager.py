@@ -528,7 +528,7 @@ def _html_attr(value):
     return s
 
 
-def setup_page(update_available=False, update_version=""):
+def setup_page(update_available=False, update_version="", firmware_version=""):
     cfg = merge_defaults(load_config())
     checked_beacon = "checked" if cfg.get("beacon_pulse", True) else ""
     checked_sleep = "checked" if cfg.get("sleep_enabled", False) else ""
@@ -649,6 +649,7 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <button type="submit">Save &amp; Reboot</button>
 </form>
 <h2>Firmware update</h2>
+<p><strong>This chart is firmware __FW_VER__</strong></p>
 __UPDATE_BANNER__
 <p class="note">The chart must already be on home Wi-Fi with internet. This does not change your light list or Wi-Fi password. The chart restarts when the update starts. A short press on the setup button also installs.</p>
 <form action="/start-update" method="post">
@@ -879,16 +880,27 @@ say('Loaded '+lights.length+' lights');
     except Exception:
         items = []
     page = page.replace("__LIGHTS_JSON__", json.dumps(items).replace("<", "\\u003c"))
+    fw = str(firmware_version or "").strip()
+    if not fw:
+        try:
+            import sys
+            fw = str(getattr(sys.modules.get("__main__"), "FIRMWARE_VERSION", "") or "")
+        except Exception:
+            fw = ""
+    page = page.replace("__FW_VER__", _html_attr(fw or "unknown"))
     if update_available:
         ver = (" v" + str(update_version)) if update_version else ""
         banner = (
             '<p class="card" style="background:#E8A838;color:#0B1F3A">'
             "<strong>Update available%s</strong><br>"
-            "Install below, or press the setup button once. "
-            "OLED and matrix scroll this too.</p>"
-        ) % _html_attr(ver)
+            "This chart is still on %s. Install below, or press the setup button once. "
+            "The page will go dark while it downloads, then the chart restarts.</p>"
+        ) % (_html_attr(ver), _html_attr(fw or "this version"))
     else:
-        banner = ""
+        banner = (
+            '<p class="note">No update waiting. This chart matches GitHub, '
+            "or the chart is not on home Wi-Fi yet.</p>"
+        )
     page = page.replace("__UPDATE_BANNER__", banner)
     return page
 
@@ -1033,7 +1045,15 @@ def run_server(force_ap=False):
             if first.startswith("OPTIONS"):
                 send_options(conn)
             elif first.startswith("GET /status"):
-                send_json(conn, {"ok": True, "mode": "setup", "name": "GreatLakesLighthouses"})
+                st = {"ok": True, "mode": "setup", "name": "GreatLakesLighthouses"}
+                try:
+                    import sys
+                    ver = getattr(sys.modules.get("__main__"), "FIRMWARE_VERSION", None)
+                    if ver:
+                        st["version"] = ver
+                except Exception:
+                    pass
+                send_json(conn, st)
             elif first.startswith("GET /help"):
                 send_static_file(
                     conn,

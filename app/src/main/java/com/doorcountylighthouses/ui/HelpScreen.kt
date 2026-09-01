@@ -46,10 +46,15 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Version $versionName",
+            text = "App version $versionName",
             style = MaterialTheme.typography.titleMedium,
             color = Amber,
             fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "Pico chart firmware is on the Settings tab after Fetch — not here.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
         )
 
         HelpCard(

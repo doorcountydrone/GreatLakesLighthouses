@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.18"
+FIRMWARE_VERSION = "0.6.19"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -1138,7 +1138,7 @@ def _handle_conn(conn):
                     _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "message": "saved"}))
                 else:
                     import wifi_manager
-                    _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", "")))
+                    _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", ""), FIRMWARE_VERSION))
             except Exception as e:
                 _http_send(conn, "application/json", json.dumps({"ok": False, "message": str(e)}))
         elif method == "GET" and path == "/status":
@@ -1213,7 +1213,7 @@ def _handle_conn(conn):
             return
         elif method == "GET" and path in ("/", "/index.html"):
             import wifi_manager
-            _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", "")))
+            _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", ""), FIRMWARE_VERSION))
         elif method == "GET" and path == "/favicon.ico":
             _http_send(conn, "text/plain", "")
         else:
