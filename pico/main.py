@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.14"
+FIRMWARE_VERSION = "0.6.17"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -99,6 +99,32 @@ WX_COLOR = {
     "FC": (255, 0, 0),
     "+FC": (255, 0, 0),
     "TORNADO": (255, 0, 0),
+}
+
+# Ticker words. Matching still uses the METAR token.
+WX_LABEL = {
+    "BR": "Mist",
+    "-RA": "Light Rain",
+    "RA": "Rain",
+    "+RA": "Heavy Rain",
+    "-SN": "Light Snow",
+    "SN": "Snow",
+    "+SN": "Heavy Snow",
+    "SHSN": "Snow Showers",
+    "LTG": "Lightning",
+    "DSNT": "Distant",
+    "WND": "Wind",
+    "FG": "Fog",
+    "FZFG": "Freezing Fog",
+    "FZFD": "Freezing",
+    "CC": "Cloud Lightning",
+    "CA": "Air Lightning",
+    "CG": "Ground Lightning",
+    "VCTS": "Thunder Nearby",
+    "TS": "Thunderstorm",
+    "FC": "Funnel Cloud",
+    "+FC": "Tornado",
+    "TORNADO": "Tornado",
 }
 
 WX_FOG = ("FG", "BR", "FZFG", "HZ")
@@ -464,11 +490,24 @@ def _parse_flight_category(raw_text):
     return "VFR"
 
 
+def _metar_body(raw_text):
+    """Present-weather side of a METAR only. RMK is history / lightning notes."""
+    raw = str(raw_text or "").strip().upper()
+    if not raw:
+        return ""
+    i = raw.find(" RMK")
+    if i < 0:
+        i = raw.find(" RMK ")
+    if i >= 0:
+        raw = raw[:i]
+    return raw
+
+
 def wx_codes(raw_text):
-    """MetarMap WX_TAGS that appear as exact tokens, for the matrix ticker."""
+    """Present-weather WX_TAGS only (before RMK), for the matrix/OLED ticker."""
     if not raw_text:
         return []
-    toks = raw_text.upper().split()
+    toks = _metar_body(raw_text).split()
     out = []
     for tag in WX_TAGS:
         if tag in WX_SKIP_SCROLL:
@@ -482,7 +521,7 @@ def wx_bits(raw_text):
     bits = 0
     if not raw_text:
         return 0
-    for tok in raw_text.upper().split():
+    for tok in _metar_body(raw_text).split():
         if tok in WX_FOG:
             bits |= 1
         elif tok in WX_RAIN:
@@ -562,27 +601,66 @@ def _store_metar(found, station, raw, category=""):
     }
 
 
+def _metar_records(text):
+    """One complete METAR/SPECI per item, even if AWC glued several on one line."""
+    text = str(text or "").replace("\r", "\n")
+    records = []
+    for chunk in text.split("\n"):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        start = 0
+        up = chunk.upper()
+        while start < len(chunk):
+            rest = up[start + 1:]
+            nxt_m = rest.find(" METAR ")
+            nxt_s = rest.find(" SPECI ")
+            nxt = -1
+            if nxt_m >= 0 and nxt_s >= 0:
+                nxt = min(nxt_m, nxt_s)
+            elif nxt_m >= 0:
+                nxt = nxt_m
+            elif nxt_s >= 0:
+                nxt = nxt_s
+            if nxt < 0:
+                piece = chunk[start:].strip()
+                if piece:
+                    records.append(piece)
+                break
+            end = start + 1 + nxt
+            piece = chunk[start:end].strip()
+            if piece:
+                records.append(piece)
+            start = end + 1
+    return records
+
+
 def _ingest_raw(text, wanted, found):
-    for line in text.split("\n"):
+    for line in _metar_records(text):
         station, raw = _station_from_line(line, wanted)
         if station:
             _store_metar(found, station, raw)
 
 
 def _ingest_xml(text, station, found):
-    rt_start = text.find("<raw_text>")
-    rt_end = text.find("</raw_text>", rt_start)
-    if rt_start < 0 or rt_end < 0:
-        return
-    raw = text[rt_start + 10:rt_end].strip()
-    if not raw:
-        return
-    fc_start = text.find("<flight_category>")
-    fc_end = text.find("</flight_category>", fc_start)
-    category = ""
-    if fc_start >= 0 and fc_end > fc_start:
-        category = text[fc_start + 17:fc_end].strip().upper()
-    _store_metar(found, station, raw, category)
+    idx = 0
+    while True:
+        rt_start = text.find("<raw_text>", idx)
+        rt_end = text.find("</raw_text>", rt_start)
+        if rt_start < 0 or rt_end < 0:
+            return
+        raw = text[rt_start + 10:rt_end].strip()
+        idx = rt_end + 1
+        if not raw:
+            continue
+        next_rt = text.find("<raw_text>", rt_end)
+        search_end = next_rt if next_rt >= 0 else len(text)
+        fc_start = text.find("<flight_category>", rt_end)
+        fc_end = text.find("</flight_category>", fc_start)
+        category = ""
+        if fc_start >= 0 and fc_end > fc_start and fc_start < search_end:
+            category = text[fc_start + 17:fc_end].strip().upper()
+        _store_metar(found, station, raw, category)
 
 
 def fetch_metars():
@@ -594,7 +672,8 @@ def fetch_metars():
     for sid in ids:
         wanted[sid] = True
     found = {}
-    url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=1&format=raw" % ",".join(ids)
+    # No hours = current observation only (hours=1 returns every report in the last hour).
+    url = "https://aviationweather.gov/api/data/metar?ids=%s&format=raw" % ",".join(ids)
     print("Fetch", url)
     try:
         _ingest_raw(_http_get_text(url), wanted, found)
@@ -603,7 +682,7 @@ def fetch_metars():
     missing = [sid for sid in ids if sid not in found]
     for sid in missing:
         try:
-            one = "https://aviationweather.gov/api/data/metar?ids=%s&hours=2&format=raw" % sid
+            one = "https://aviationweather.gov/api/data/metar?ids=%s&format=raw" % sid
             print("Fetch", sid)
             _ingest_raw(_http_get_text(one, timeout=10), wanted, found)
         except Exception as e:
@@ -611,7 +690,7 @@ def fetch_metars():
         if sid in found:
             continue
         try:
-            xml_url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=2&format=xml" % sid
+            xml_url = "https://aviationweather.gov/api/data/metar?ids=%s&format=xml" % sid
             _ingest_xml(_http_get_text(xml_url, timeout=10), sid, found)
             if sid in found:
                 print("Got", sid, "from XML")
@@ -623,6 +702,11 @@ def fetch_metars():
     _oled_msgs = []
     still = [sid for sid in ids if sid not in found]
     print("Got", len(found), "stations", list(found.keys()))
+    for sid in found:
+        raw = found[sid].get("raw", "")
+        codes = wx_codes(raw)
+        print(sid, raw[:72])
+        print(" ", "wx", " ".join(WX_LABEL.get(c, c) for c in codes) if codes else "none")
     if still:
         print("No METAR yet:", still)
 
@@ -1166,7 +1250,7 @@ def _matrix_light_segments():
         color = CATEGORY_COLOR.get(cat) or CATEGORY_COLOR[""]
         segs.append((name, color))
         for code in codes:
-            segs.append((code, WX_COLOR.get(code) or (255, 255, 255)))
+            segs.append((WX_LABEL.get(code, code), WX_COLOR.get(code) or (255, 255, 255)))
     return segs
 
 
