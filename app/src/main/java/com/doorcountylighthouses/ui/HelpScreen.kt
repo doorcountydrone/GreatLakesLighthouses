@@ -151,7 +151,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         HelpCard(
             title = "Firmware updates",
             body = "After the chart joins home Wi-Fi, it checks online for a newer version. It does not install by itself.\n\n" +
-                "If an update is waiting, the lights flash amber for a couple of seconds after startup. On Settings, tap Install firmware update. A short tap on the setup button while the chart is running also installs. Hold the button 3 seconds (at power-on or while running) to open GreatLakes-Setup.\n\n" +
+                "If an update is waiting, Settings shows it, the browser page shows a yellow banner, and OLED / matrix scroll UPDATE AVAILABLE PRESS BUTTON. Press the setup button once to install, or tap Install firmware update. Hold the button 3 seconds to open GreatLakes-Setup.\n\n" +
                 "The chart must be on home Wi-Fi with internet. Your light list and Wi-Fi stay. The chart restarts when the update starts. Wait about 30 seconds, then Fetch to confirm.",
         )
 

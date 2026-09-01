@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.17"
+FIRMWARE_VERSION = "0.6.18"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -993,6 +993,36 @@ def _handle_start_update(conn):
             pass
 
 
+def _ota_scroll_text():
+    ver = ""
+    if update_info:
+        ver = str(update_info.get("version") or "")
+    if ver:
+        return "UPDATE AVAILABLE " + ver + "  PRESS BUTTON"
+    return "UPDATE AVAILABLE PRESS BUTTON"
+
+
+def _announce_ota():
+    global _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_need_text
+    _oled_blank_until = 0
+    _oled_msgs = [("UPDATE", _ota_scroll_text())]
+    _oled_msg_i = 0
+    _oled_x = 128
+    _matrix_need_text = True
+    try:
+        paint_all((255, 140, 0))
+    except Exception:
+        pass
+    if oled is not None:
+        try:
+            oled.fill(0)
+            _oled_print_centered(0, "UPDATE")
+            _oled_print_centered(32, "PRESS BTN")
+            oled.show()
+        except Exception:
+            pass
+
+
 def check_for_ota():
     global update_available, update_info
     print("OTA: checking for newer firmware...")
@@ -1003,11 +1033,7 @@ def check_for_ota():
         update_info = version_info
         if has_update:
             print("OTA: new version", version_info.get("version"), "- install from the app, browser, or a short tap on the setup button")
-            try:
-                paint_all((255, 160, 0))
-                time.sleep(2)
-            except Exception:
-                pass
+            _announce_ota()
         else:
             print("OTA: device firmware current (or check unreachable)")
     except Exception as e:
@@ -1043,7 +1069,7 @@ def poll_ota_button():
         return
     held = time.ticks_diff(now, _ota_down_ms)
     _ota_down_ms = None
-    if not update_available or held < 50 or held > 800:
+    if not update_available or held < 40 or held > 1500:
         return
     print("OTA: setup button tap - installing")
     try:
@@ -1112,7 +1138,7 @@ def _handle_conn(conn):
                     _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "message": "saved"}))
                 else:
                     import wifi_manager
-                    _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page())
+                    _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", "")))
             except Exception as e:
                 _http_send(conn, "application/json", json.dumps({"ok": False, "message": str(e)}))
         elif method == "GET" and path == "/status":
@@ -1187,7 +1213,7 @@ def _handle_conn(conn):
             return
         elif method == "GET" and path in ("/", "/index.html"):
             import wifi_manager
-            _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page())
+            _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", "")))
         elif method == "GET" and path == "/favicon.ico":
             _http_send(conn, "text/plain", "")
         else:
@@ -1272,6 +1298,8 @@ def refresh_matrix():
         ip = status.get("ip")
         if ip:
             segs.append((str(ip), (255, 180, 48)))
+    if update_available:
+        segs.append((_ota_scroll_text(), (255, 140, 0)))
     segs.extend(_matrix_light_segments())
     idle = not segs
     if idle:
@@ -1416,6 +1444,8 @@ def _oled_messages():
         ip = status.get("ip")
         if ip:
             msgs.append(("IP", str(ip)))
+    if update_available:
+        msgs.append(("UPDATE", _ota_scroll_text()))
     cur = []
     for text, _color in _matrix_light_segments():
         if text == "-":
@@ -1519,9 +1549,9 @@ def main():
     sync_ntp()
     fetch_metars()
     init_ota_button()
-    check_for_ota()
     gc.collect()
     start_http()
+    check_for_ota()
     print("Running")
     last_fetch = time.time()
     while True:
