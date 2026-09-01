@@ -259,8 +259,15 @@ def tick(level=8, sleeping=False):
         return False
     n = len(_columns)
     span = max(1, n - WIDTH)
-    scale = max(1, min(30, int(level)))
+    scale = max(0, min(255, int(level)))
     _np.fill((0, 0, 0))
+    if scale <= 0:
+        _np.write()
+        _offset += 1
+        if _offset >= span:
+            _offset = 0
+            return True
+        return False
     for x in range(WIDTH):
         idx = _offset + x
         if idx >= n:

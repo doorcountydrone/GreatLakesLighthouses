@@ -14,6 +14,7 @@ Default pins (same layout as MetarMap)
   Strip data            0
   LED matrix (optional) 1  (8x32 WS2812, 5 V + common GND; not from GPIO 18)
   Force setup AP        15  (momentary button to GND; hold ~3 s at boot)
+  LDR drive            21  (held HIGH, same as MetarMap)
   LDR read (optional)  26  (ADC0)
   OLED 128x64 I2C (optional)
     SDA / data          16
@@ -21,18 +22,13 @@ Default pins (same layout as MetarMap)
     3.3 V from Pico     18  (firmware sets this pin HIGH)
     GND from Pico       19  (firmware sets this pin LOW)
 
-  Keep the 10k. In a bright room the LDR resistance drops near a short; the
-  10k is what limits current from 3.3 V into GPIO 26. 47k also works but sits
-  in a narrower ADC range.
+  Keep the 10k. Firmware holds GPIO 21 HIGH (3.3 V). Do not also feed the
+  3.3 V pin into that same node.
 
-  3.3 V -- LDR -- GPIO 26 -- 10k -- GND
+  GPIO 21 -- LDR -- GPIO 26 -- 10k -- GND
 
-  This LDR reads a low ADC in bright light (~700) and higher when covered
-  (~16000). The strip follows that: bright room dims toward min, dark uses
-  max. Raise min brightness if you still want a glow in daylight. Do not
-  wire the LDR from 3.3 V straight to GND. GPIO 21 is free.
-
-  OLED: copy ssd1306.py next to main.py. The screen rotates IP / LDR / METAR.
+  OLED: copy ssd1306.py, writer.py, and sans18.py next to main.py. Scrolls
+  the same text as the matrix (IP once, then light names and weather).
   LED matrix: copy led_matrix.py next to main.py. 8x32 on GPIO 1, snake-column
   wiring (same as MetarMap). Scrolls IP, METAR, and light names. Power the
   matrix from 5 V, not GPIO 18. If letters look mirrored, change WIRING in

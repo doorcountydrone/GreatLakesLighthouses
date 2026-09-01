@@ -1,13 +1,14 @@
 import gc
 import json
 import math
+import os
 import machine
 import neopixel
 import network
 import socket
 import utime as time
 
-machine.freq(250_000_000)
+machine.freq(230_000_000)
 
 try:
     import urequests
@@ -19,23 +20,32 @@ try:
 except ImportError:
     ntptime = None
 
-FIRMWARE_VERSION = "0.6.0"
+try:
+    import sans18
+    import writer
+    fonts_available = True
+except ImportError:
+    fonts_available = False
+    print("OLED fonts skipped (copy writer.py and sans18.py)")
+
+FIRMWARE_VERSION = "0.6.14"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
+FORCE_AP_FLAG = "force_ap.flag"
 LED_PIN = 0
 NUM_LEDS = 13
 BRIGHTNESS = 0.18
-MIN_BRIGHTNESS = 2
+MIN_BRIGHTNESS = 0
 MAX_BRIGHTNESS = 18
 BEACON_PULSE = True
 CYCLE_DELAY = 300
 LDR_ADC_PIN = 26
+LDR_DRIVE_PIN = 21
 OLED_SDA_PIN = 16
 OLED_SCL_PIN = 17
 OLED_VCC_PIN = 18
 OLED_GND_PIN = 19
-OLED_PAGE_MS = 3000
 MATRIX_IDLE_MS = 15000
 MATRIX_IDLE_COLOR = (40, 200, 210)
 MATRIX_SCROLL_SPEED = 7
@@ -135,12 +145,14 @@ _ldr_out = None
 _ldr_raw = 0
 _ldr_last_ms = 0
 _ldr_print_ms = 0
-# This LDR + 10k (or 47k) to GND stays around ADC 700 (bright room) to ~16000
-# (dark / covered). It never nears 65535. Low ADC → min LEDs, high ADC → max.
+# GPIO 21 HIGH -- LDR -- GPIO 26 -- 10k -- GND. Wide default so boot uses the
+# real ADC immediately; ends expand if a reading goes outside.
+LDR_ADC_LO = 500
+LDR_ADC_HI = 50000
 LDR_SAMPLE_MS = 400
-LDR_ADC_BRIGHT = 700
-LDR_ADC_DARK = 16000
-LDR_TAU_S = 1.6
+LDR_TAU_S = 0.4
+_adc_lo = LDR_ADC_LO
+_adc_hi = LDR_ADC_HI
 
 
 def _clamp(n, lo, hi):
@@ -148,7 +160,9 @@ def _clamp(n, lo, hi):
 
 
 def load_config():
-    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg, DISPLAY_TYPE, MATRIX_SCROLL, MATRIX_SCROLL_SPEED
+    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg, DISPLAY_TYPE, MATRIX_SCROLL, MATRIX_SCROLL_SPEED, _ldr_filt, _ldr_out, _ldr_last_ms, _adc_lo, _adc_hi
+    old_min = MIN_BRIGHTNESS
+    old_max = MAX_BRIGHTNESS
     try:
         with open(CONFIG_FILE, "r") as f:
             cfg = json.load(f)
@@ -169,7 +183,7 @@ def load_config():
         MAX_BRIGHTNESS = _clamp(int(cfg.get("max_brightness", 18)), 1, BRIGHTNESS_CAP)
     else:
         MAX_BRIGHTNESS = _clamp(int(round(BRIGHTNESS * 255)), 1, BRIGHTNESS_CAP)
-    MIN_BRIGHTNESS = _clamp(int(cfg.get("min_brightness", 2)), 0, BRIGHTNESS_CAP)
+    MIN_BRIGHTNESS = _clamp(int(cfg.get("min_brightness", 0)), 0, BRIGHTNESS_CAP)
     if MIN_BRIGHTNESS > MAX_BRIGHTNESS:
         MIN_BRIGHTNESS = MAX_BRIGHTNESS
     BRIGHTNESS = max(0.02, min(1.0, MAX_BRIGHTNESS / 255.0))
@@ -178,21 +192,42 @@ def load_config():
     for k in sleep_cfg:
         if k in cfg:
             sleep_cfg[k] = cfg[k]
-    print("Display", DISPLAY_TYPE, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED)
+    print("Display", DISPLAY_TYPE, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED, "bright", MIN_BRIGHTNESS, "-", MAX_BRIGHTNESS)
+    if old_min != MIN_BRIGHTNESS or old_max != MAX_BRIGHTNESS:
+        _ldr_filt = None
+        _ldr_out = None
+        _ldr_last_ms = 0
+        _adc_lo = LDR_ADC_LO
+        _adc_hi = LDR_ADC_HI
     return cfg
 
 
 def force_ap_held():
     pin = machine.Pin(FORCE_AP_BUTTON_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
-    if pin.value() != 0:
-        return False
-    print("AP button held — wait 3s")
-    t0 = time.ticks_ms()
-    while pin.value() == 0:
-        if time.ticks_diff(time.ticks_ms(), t0) >= 3000:
-            return True
-        time.sleep_ms(20)
+    if pin.value() == 0:
+        print("AP button down at startup")
+        return True
     return False
+
+
+def consume_force_ap_flag():
+    try:
+        if FORCE_AP_FLAG in os.listdir():
+            os.remove(FORCE_AP_FLAG)
+            print("Setup button held — opening AP")
+            return True
+    except Exception as e:
+        print("force AP flag:", e)
+    return False
+
+
+def request_force_ap_reboot():
+    try:
+        with open(FORCE_AP_FLAG, "w") as f:
+            f.write("1")
+    except Exception as e:
+        print("force AP flag write:", e)
+    machine.reset()
 
 
 def connect_wifi(cfg):
@@ -238,14 +273,10 @@ def connect_wifi(cfg):
 def load_lighthouses():
     global lighthouses
     try:
-        with open(LIGHTHOUSE_FILE, "r") as f:
-            raw = f.read()
-        if raw.startswith("\ufeff"):
-            raw = raw[1:]
-        data = json.loads(raw)
-        items = data.get("lighthouses", []) if isinstance(data, dict) else data
-        if not isinstance(items, list):
-            raise ValueError("lighthouses is not a list")
+        import wifi_manager
+        items = wifi_manager.load_lighthouse_list()
+        if not items:
+            raise ValueError("empty list")
         items.sort(key=lambda x: int(x.get("led", 0)))
         lighthouses = items
         print("Loaded", len(lighthouses), "lighthouses")
@@ -264,17 +295,33 @@ def init_strip():
     print("Strip GPIO", LED_PIN, "x", NUM_LEDS)
 
 
+def _ldr_level_from_t(t):
+    if t is None:
+        t = 1.0
+    level = t * (MAX_BRIGHTNESS - MIN_BRIGHTNESS) + MIN_BRIGHTNESS
+    return _clamp(int(level + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+
+
+def _pwm_from_slider(level):
+    """0 = off. 1-8 stay very dim (raw WS2812 counts). 30 = full."""
+    if level <= 0:
+        return 0
+    if level <= 8:
+        return int(level)
+    return _clamp(int(8 + (level - 8) * (255 - 8) / (BRIGHTNESS_CAP - 8)), 0, 255)
+
+
 def _ldr_refresh():
-    """Update cached brightness. Sample the ADC a few times per second, not every LED frame."""
-    global _ldr_filt, _ldr_out, _ldr_raw, _ldr_last_ms, _ldr_print_ms
+    """Map this board's live dark..bright ADC onto min..max so min=2 is actually 2 when covered."""
+    global _ldr_filt, _ldr_out, _ldr_raw, _ldr_last_ms, _ldr_print_ms, _adc_lo, _adc_hi
     if ldr_adc is None:
         _ldr_out = float(MAX_BRIGHTNESS)
         return int(_ldr_out)
     now = time.ticks_ms()
-    if _ldr_last_ms and time.ticks_diff(now, _ldr_last_ms) < LDR_SAMPLE_MS:
-        if _ldr_out is None:
-            _ldr_out = float(MAX_BRIGHTNESS)
-        return _clamp(int(_ldr_out + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+    if _ldr_last_ms and _ldr_filt is not None and time.ticks_diff(now, _ldr_last_ms) < LDR_SAMPLE_MS:
+        out = _ldr_level_from_t(_ldr_filt)
+        _ldr_out = float(out)
+        return out
     _ldr_last_ms = now
     try:
         acc = 0
@@ -285,48 +332,44 @@ def _ldr_refresh():
         _ldr_out = float(MAX_BRIGHTNESS)
         return int(_ldr_out)
     _ldr_raw = raw
-
-    span = float(LDR_ADC_DARK - LDR_ADC_BRIGHT)
+    if raw < _adc_lo:
+        _adc_lo = raw
+    if raw > _adc_hi:
+        _adc_hi = raw
+    span = float(_adc_hi - _adc_lo)
     if span < 1:
         span = 1
-    # Low ADC = bright room = dim strip. High ADC = dark = brighter strip.
-    t = (raw - LDR_ADC_BRIGHT) / span
+    t = (raw - _adc_lo) / span
     if t < 0.0:
         t = 0.0
     elif t > 1.0:
         t = 1.0
-    level = t * (MAX_BRIGHTNESS - MIN_BRIGHTNESS) + MIN_BRIGHTNESS
-    if _ldr_filt is None:
-        _ldr_filt = level
-    else:
-        dt = LDR_SAMPLE_MS / 1000.0
-        alpha = 1.0 - math.exp(-dt / LDR_TAU_S)
-        _ldr_filt = _ldr_filt + (level - _ldr_filt) * alpha
-    _ldr_out = _ldr_filt
-    out = _clamp(int(_ldr_out + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
-
+    _ldr_filt = t
+    out = _ldr_level_from_t(_ldr_filt)
+    _ldr_out = float(out)
     if time.ticks_diff(now, _ldr_print_ms) > 2500:
         _ldr_print_ms = now
-        print("LDR", raw, "->", out)
+        print("LDR", raw, "lo", int(_adc_lo), "hi", int(_adc_hi), "->", out, "min", MIN_BRIGHTNESS, "max", MAX_BRIGHTNESS)
     return out
 
 
 def _ldr_level():
-    if _ldr_out is None:
-        return _ldr_refresh()
-    return _clamp(int(_ldr_out + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+    return _ldr_refresh()
 
 
 def scale_color(rgb, brightness=None):
-    if brightness is not None:
-        level = _clamp(int(round(float(brightness) * 255)), 0, 255)
-    else:
-        level = _ldr_level()
     r, g, b = rgb
+    peak = max(r, g, b)
+    if peak <= 0:
+        return (0, 0, 0)
+    if brightness is not None:
+        pwm = _clamp(int(round(float(brightness) * 255)), 0, 255)
+    else:
+        pwm = _pwm_from_slider(_ldr_level())
     return (
-        _clamp(int(r * level / 255), 0, 255),
-        _clamp(int(g * level / 255), 0, 255),
-        _clamp(int(b * level / 255), 0, 255),
+        _clamp(r * pwm // peak, 0, 255),
+        _clamp(g * pwm // peak, 0, 255),
+        _clamp(b * pwm // peak, 0, 255),
     )
 
 
@@ -485,16 +528,45 @@ def _station_from_line(line, wanted):
     return None, None
 
 
+def _metar_obs_minutes(line):
+    """ddhhmmZ from a METAR line, as minutes, for newest-wins."""
+    for tok in str(line).upper().split():
+        if len(tok) == 7 and tok.endswith("Z") and tok[:6].isdigit():
+            return int(tok[0:2]) * 1440 + int(tok[2:4]) * 60 + int(tok[4:6])
+    return -1
+
+
+def _metar_is_newer(new_line, old_line):
+    n = _metar_obs_minutes(new_line)
+    o = _metar_obs_minutes(old_line)
+    if n < 0:
+        return False
+    if o < 0:
+        return True
+    # Month wrap: day 1 after day 28–31.
+    if o - n > 20000:
+        return True
+    if n - o > 20000:
+        return False
+    return n > o
+
+
+def _store_metar(found, station, raw, category=""):
+    prev = found.get(station)
+    if prev and not _metar_is_newer(raw, prev.get("raw") or ""):
+        return
+    found[station] = {
+        "category": category or _parse_flight_category(raw) or "VFR",
+        "raw": raw,
+        "wx": wx_bits(raw),
+    }
+
+
 def _ingest_raw(text, wanted, found):
     for line in text.split("\n"):
         station, raw = _station_from_line(line, wanted)
-        if not station:
-            continue
-        found[station] = {
-            "category": _parse_flight_category(raw) or "VFR",
-            "raw": raw,
-            "wx": wx_bits(raw),
-        }
+        if station:
+            _store_metar(found, station, raw)
 
 
 def _ingest_xml(text, station, found):
@@ -510,15 +582,11 @@ def _ingest_xml(text, station, found):
     category = ""
     if fc_start >= 0 and fc_end > fc_start:
         category = text[fc_start + 17:fc_end].strip().upper()
-    found[station] = {
-        "category": category or _parse_flight_category(raw) or "VFR",
-        "raw": raw,
-        "wx": wx_bits(raw),
-    }
+    _store_metar(found, station, raw, category)
 
 
 def fetch_metars():
-    global _matrix_need_text
+    global _matrix_need_text, _oled_msgs
     ids = unique_stations()
     if not ids:
         return
@@ -526,7 +594,7 @@ def fetch_metars():
     for sid in ids:
         wanted[sid] = True
     found = {}
-    url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=3&format=raw" % ",".join(ids)
+    url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=1&format=raw" % ",".join(ids)
     print("Fetch", url)
     try:
         _ingest_raw(_http_get_text(url), wanted, found)
@@ -535,7 +603,7 @@ def fetch_metars():
     missing = [sid for sid in ids if sid not in found]
     for sid in missing:
         try:
-            one = "https://aviationweather.gov/api/data/metar?ids=%s&hours=6&format=raw" % sid
+            one = "https://aviationweather.gov/api/data/metar?ids=%s&hours=2&format=raw" % sid
             print("Fetch", sid)
             _ingest_raw(_http_get_text(one, timeout=10), wanted, found)
         except Exception as e:
@@ -543,7 +611,7 @@ def fetch_metars():
         if sid in found:
             continue
         try:
-            xml_url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=6&format=xml" % sid
+            xml_url = "https://aviationweather.gov/api/data/metar?ids=%s&hours=2&format=xml" % sid
             _ingest_xml(_http_get_text(xml_url, timeout=10), sid, found)
             if sid in found:
                 print("Got", sid, "from XML")
@@ -552,6 +620,7 @@ def fetch_metars():
     status["stations"] = found
     status["last_fetch"] = time.time()
     _matrix_need_text = True
+    _oled_msgs = []
     still = [sid for sid in ids if sid not in found]
     print("Got", len(found), "stations", list(found.keys()))
     if still:
@@ -745,15 +814,8 @@ def apply_lighthouse_list(items):
     global lighthouses, NUM_LEDS
     if not isinstance(items, list):
         return 0
-    cleaned = []
-    for i, raw in enumerate(items):
-        if not isinstance(raw, dict):
-            continue
-        entry = dict(raw)
-        entry["led"] = i
-        cleaned.append(entry)
-    with open(LIGHTHOUSE_FILE, "w") as f:
-        json.dump({"version": 3, "order": "list", "lighthouses": cleaned})
+    import wifi_manager
+    cleaned = wifi_manager.save_lighthouse_list(items)
     lighthouses = cleaned
     n = max(1, len(cleaned))
     if n != NUM_LEDS:
@@ -763,7 +825,7 @@ def apply_lighthouse_list(items):
             cfg = load_config()
             cfg["num_leds"] = n
             with open(CONFIG_FILE, "w") as cf:
-                json.dump(cfg)
+                json.dump(cfg, cf)
         except Exception as e:
             print("num_leds save:", e)
     print("Saved", len(cleaned), "lighthouses")
@@ -881,19 +943,23 @@ def init_ota_button():
 
 def poll_ota_button():
     global _ota_down_ms
-    if _ota_btn is None or not update_available:
+    if _ota_btn is None:
         return
     pressed = _ota_btn.value() == 0
     now = time.ticks_ms()
     if pressed:
         if _ota_down_ms is None:
             _ota_down_ms = now
+        elif time.ticks_diff(now, _ota_down_ms) >= 3000:
+            print("Setup button held 3s — reboot to AP")
+            _ota_down_ms = None
+            request_force_ap_reboot()
         return
     if _ota_down_ms is None:
         return
     held = time.ticks_diff(now, _ota_down_ms)
     _ota_down_ms = None
-    if held < 50 or held > 800:
+    if not update_available or held < 50 or held > 800:
         return
     print("OTA: setup button tap - installing")
     try:
@@ -928,7 +994,10 @@ def _handle_conn(conn):
         line = header.split("\r\n", 1)[0] if header else ""
         path = _request_path(line)
         method = line.split(" ", 1)[0] if line else "GET"
-        if method == "GET" and path == "/help":
+        if method == "OPTIONS":
+            import wifi_manager
+            wifi_manager.send_options(conn)
+        elif method == "GET" and path == "/help":
             import wifi_manager
             wifi_manager.send_static_file(
                 conn,
@@ -946,10 +1015,20 @@ def _handle_conn(conn):
             _http_send(conn, "application/json", json.dumps({"ok": True, "lighthouses": lighthouse_payload()}))
         elif method == "POST" and path == "/lighthouses":
             try:
-                payload = json.loads(req_body) if req_body else {}
+                import wifi_manager
+                if req_body and req_body.lstrip()[:1] == "{":
+                    payload = json.loads(req_body)
+                else:
+                    payload = wifi_manager.parse_body("\r\n\r\n" + (req_body or ""))
                 items = payload.get("lighthouses") if isinstance(payload, dict) else payload
+                if isinstance(items, str):
+                    items = json.loads(items)
                 count = apply_lighthouse_list(items)
-                _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "message": "saved"}))
+                if req_body and req_body.lstrip()[:1] == "{":
+                    _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "message": "saved"}))
+                else:
+                    import wifi_manager
+                    _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page())
             except Exception as e:
                 _http_send(conn, "application/json", json.dumps({"ok": False, "message": str(e)}))
         elif method == "GET" and path == "/status":
@@ -1042,8 +1121,12 @@ def _handle_conn(conn):
 
 
 oled = None
-_oled_page = 0
+_oled_wri = None
 _oled_last_ms = 0
+_oled_msgs = []
+_oled_msg_i = 0
+_oled_x = 128
+_oled_blank_until = 0
 _matrix_need_text = True
 _matrix_ip_done = False
 _matrix_idle_until = 0
@@ -1117,8 +1200,8 @@ def refresh_matrix():
         led_matrix.set_segments(segs)
         _matrix_need_text = False
         _matrix_idle_pass = idle
-    level = _clamp(int((_ldr_out or MAX_BRIGHTNESS) + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
-    if led_matrix.tick(level, False):
+    pwm = _pwm_from_slider(_ldr_level())
+    if led_matrix.tick(pwm, False):
         _matrix_need_text = True
         _matrix_ip_done = True
         if _matrix_idle_pass:
@@ -1127,7 +1210,8 @@ def refresh_matrix():
 
 
 def init_oled():
-    global oled
+    global oled, _oled_wri
+    _oled_wri = None
     if DISPLAY_TYPE != "OLED":
         try:
             machine.Pin(OLED_VCC_PIN, machine.Pin.OUT).value(0)
@@ -1144,62 +1228,174 @@ def init_oled():
         oled = ssd1306.SSD1306_I2C(128, 64, i2c)
         oled.contrast(128)
         oled.fill(0)
-        oled.text("Great Lakes", 0, 0, 1)
-        oled.text("Lighthouses", 0, 12, 1)
-        oled.text("v" + FIRMWARE_VERSION, 0, 28, 1)
+        # Dual-color 128x64: yellow y=0-15, blue y=16-63. sans18 is ~18px.
+        _oled_print_centered(0, "Great Lakes")
+        _oled_print(32, "v" + FIRMWARE_VERSION)
         oled.show()
-        print("OLED on SDA", OLED_SDA_PIN, "SCL", OLED_SCL_PIN)
+        print("OLED on SDA", OLED_SDA_PIN, "SCL", OLED_SCL_PIN, "font", "sans18" if fonts_available else "8x8")
     except Exception as e:
         oled = None
+        _oled_wri = None
         print("OLED skipped:", e)
 
 
-def _oled_line(y, text):
-    oled.text(str(text)[:16], 0, y, 1)
+def _oled_writer():
+    global _oled_wri
+    if not fonts_available or oled is None:
+        return None
+    if _oled_wri is None:
+        try:
+            try:
+                _oled_wri = writer.Writer(oled, sans18, verbose=False)
+            except TypeError:
+                _oled_wri = writer.Writer(oled, sans18)
+            if hasattr(_oled_wri, "row_clip"):
+                _oled_wri.row_clip = True
+        except Exception as e:
+            print("OLED writer:", e)
+            return None
+    return _oled_wri
+
+
+def _oled_print(y, text):
+    text = str(text)
+    w = _oled_writer()
+    if w is None:
+        oled.text(text[:16], 0, y, 1)
+        return
+    # Same Writer as MarksMetarMap: set_textpos(x, y), not (row, col).
+    try:
+        w.set_textpos(0, y)
+    except Exception:
+        try:
+            writer.Writer.set_textpos(oled, 0, y)
+        except Exception:
+            oled.text(text[:16], 0, y, 1)
+            return
+    w.printstring(text)
+
+
+def _oled_ch_w(ch):
+    w = _oled_writer()
+    if w is not None:
+        try:
+            n = w.stringlen(ch)
+            if n > 0:
+                return n
+        except Exception:
+            pass
+    return 11 if fonts_available else 8
+
+
+def _oled_str_w(text):
+    n = 0
+    for ch in text:
+        n += _oled_ch_w(ch)
+    return n
+
+
+def _oled_print_at(x, y, text):
+    # Draw only glyphs that fit on this row. Writer wraps a too-wide
+    # character onto the next line (left side, under the scroll).
+    w = _oled_writer()
+    cx = x
+    for ch in text:
+        cw = _oled_ch_w(ch)
+        nxt = cx + cw
+        if nxt <= 0:
+            cx = nxt
+            continue
+        if cx >= 128:
+            break
+        if cx >= 0 and nxt <= 128:
+            if w is not None:
+                try:
+                    w.set_textpos(cx, y)
+                    w.printstring(ch)
+                except Exception:
+                    pass
+            else:
+                oled.text(ch, cx, y, 1)
+        cx = nxt
+
+
+def _oled_print_centered(y, text):
+    text = str(text)
+    tw = _oled_str_w(text)
+    x = 0 if tw >= 128 else (128 - tw) // 2
+    _oled_print_at(x, y, text)
+
+
+def _oled_messages():
+    msgs = []
+    if not _matrix_ip_done:
+        ip = status.get("ip")
+        if ip:
+            msgs.append(("IP", str(ip)))
+    cur = []
+    for text, _color in _matrix_light_segments():
+        if text == "-":
+            if cur:
+                msgs.append((cur[0], "  ".join(cur)))
+                cur = []
+            continue
+        cur.append(text)
+    if cur:
+        msgs.append((cur[0], "  ".join(cur)))
+    if not msgs:
+        msgs.append(("Great Lakes", "GREAT LAKES LIGHTHOUSES"))
+    return msgs
 
 
 def refresh_oled():
-    global _oled_page, _oled_last_ms
+    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_ip_done
     if oled is None:
         return
     now = time.ticks_ms()
-    if _oled_last_ms and time.ticks_diff(now, _oled_last_ms) < OLED_PAGE_MS:
+    if in_sleep_window():
+        if _oled_last_ms and time.ticks_diff(now, _oled_last_ms) < 1000:
+            return
+        _oled_last_ms = now
+        try:
+            oled.fill(0)
+            _oled_print_centered(0, "Sleep")
+            oled.show()
+        except Exception as e:
+            print("OLED:", e)
+        return
+    if _oled_blank_until and time.ticks_diff(now, _oled_blank_until) < 0:
+        return
+    if _oled_blank_until:
+        _oled_blank_until = 0
+        _oled_x = 128
+    step_ms = max(40, 140 - 10 * MATRIX_SCROLL_SPEED)
+    if _oled_last_ms and time.ticks_diff(now, _oled_last_ms) < step_ms:
         return
     _oled_last_ms = now
     try:
+        if not _oled_msgs or _oled_msg_i >= len(_oled_msgs):
+            _oled_msgs = _oled_messages()
+            _oled_msg_i = 0
+            _oled_x = 128
+        title, msg = _oled_msgs[_oled_msg_i]
+        tw = _oled_str_w(msg)
         oled.fill(0)
-        if in_sleep_window():
-            _oled_line(20, "Sleep")
-            oled.show()
-            _oled_page = (_oled_page + 1) % 3
-            return
-        page = _oled_page % 3
-        if page == 0:
-            ip = status.get("ip") or "--"
-            _oled_line(0, "Great Lakes")
-            _oled_line(12, "v" + FIRMWARE_VERSION)
-            _oled_line(28, ip)
-            _oled_line(44, "%d lights" % len(lighthouses))
-        elif page == 1:
-            level = _clamp(int((_ldr_out or MAX_BRIGHTNESS) + 0.5), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
-            _oled_line(0, "LDR brightness")
-            _oled_line(16, "ADC %d" % int(_ldr_raw))
-            _oled_line(32, "%d  min %d" % (level, MIN_BRIGHTNESS))
-            _oled_line(48, "max %d" % MAX_BRIGHTNESS)
-        else:
-            _oled_line(0, "METAR")
-            stations = status.get("stations") or {}
-            ids = list(stations.keys())[:4]
-            if not ids:
-                _oled_line(20, "none yet")
-            else:
-                y = 16
-                for sid in ids:
-                    cat = (stations.get(sid) or {}).get("category") or "?"
-                    _oled_line(y, "%s %s" % (sid, cat))
-                    y += 12
+        _oled_print_centered(0, title)
+        if _oled_x < 128 and _oled_x + tw > 0:
+            _oled_print_at(_oled_x, 32, msg)
         oled.show()
-        _oled_page = page + 1
+        _oled_x -= max(2, MATRIX_SCROLL_SPEED)
+        if _oled_x + tw < 0:
+            oled.fill(0)
+            _oled_print_centered(0, title)
+            oled.show()
+            pause = MATRIX_IDLE_MS if msg == "GREAT LAKES LIGHTHOUSES" else 800
+            _oled_blank_until = time.ticks_add(now, pause)
+            _oled_msg_i += 1
+            _oled_x = 128
+            if _oled_msg_i >= len(_oled_msgs):
+                _oled_msgs = []
+                _matrix_ip_done = True
     except Exception as e:
         print("OLED:", e)
 
@@ -1207,8 +1403,11 @@ def refresh_oled():
 def init_ldr():
     global ldr_adc
     try:
-        ldr_adc = machine.ADC(machine.Pin(LDR_ADC_PIN))
-        print("LDR on GPIO", LDR_ADC_PIN)
+        machine.Pin(LDR_DRIVE_PIN, machine.Pin.OUT).value(1)
+        time.sleep_ms(500)
+        ldr_adc = machine.ADC(0)
+        level = _ldr_refresh()
+        print("LDR drive GPIO", LDR_DRIVE_PIN, "HIGH, ADC0 GPIO", LDR_ADC_PIN, "now", _ldr_raw, "->", level)
     except Exception as e:
         ldr_adc = None
         print("LDR skipped:", e)
@@ -1217,7 +1416,7 @@ def init_ldr():
 def main():
     print("Great Lakes Lighthouses", FIRMWARE_VERSION)
     cfg = load_config()
-    held = force_ap_held()
+    held = consume_force_ap_flag() or force_ap_held()
     if held or not cfg.get("ssid"):
         import wifi_manager
         wifi_manager.start(force_ap=held or not cfg.get("ssid"))

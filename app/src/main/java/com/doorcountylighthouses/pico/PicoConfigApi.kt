@@ -108,15 +108,15 @@ class PicoConfigApi {
             when (code) {
                 200 -> {
                     if (text.contains("installing", ignoreCase = true) || text.isBlank()) {
-                        UpdateResult.Success("Update started. The map will restart.")
+                        UpdateResult.Success("Update started. The chart will restart.")
                     } else {
-                        UpdateResult.Error("Unexpected reply from the map: $text")
+                        UpdateResult.Error("Unexpected reply from the chart: $text")
                     }
                 }
                 409 -> UpdateResult.Error(
-                    "No update to install. The map is already current, or it cannot reach the internet. Use home Wi-Fi, then Fetch and try again.",
+                    "No update to install. The chart is already current, or it cannot reach the internet. Use home Wi-Fi, then Fetch and try again.",
                 )
-                in 500..599 -> UpdateResult.Error("Map update failed: ${text.ifBlank { "HTTP $code" }}")
+                in 500..599 -> UpdateResult.Error("Chart update failed: ${text.ifBlank { "HTTP $code" }}")
                 else -> UpdateResult.Error("HTTP $code ${text.take(200)}")
             }
         } catch (e: Exception) {
@@ -131,7 +131,7 @@ class PicoConfigApi {
                 "software caused connection abort",
             ).any { m.contains(it, ignoreCase = true) }
             if (likelyReboot) {
-                UpdateResult.Success("Update may have started (the map reboots and drops the connection). Wait about 30 seconds, then Fetch.")
+                UpdateResult.Success("Update may have started (the chart reboots and drops the connection). Wait about 30 seconds, then Fetch.")
             } else {
                 UpdateResult.Error(e.message ?: e.toString())
             }
@@ -165,7 +165,12 @@ class PicoConfigApi {
                 connectTimeout = 8000
                 readTimeout = 8000
             }
-            val text = conn.inputStream.bufferedReader().use { it.readText() }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty().trim()
+            if (text.isEmpty()) {
+                return FetchResult.Error("Empty reply from Pico (HTTP $code). Check the Pico address and Wi-Fi.")
+            }
             val json = JSONObject(text)
             if (!json.has("led_pin")) {
                 return FetchResult.Error("Pico firmware is too old for settings. Copy main.py and wifi_manager.py (0.4.0+) to the Pico.")

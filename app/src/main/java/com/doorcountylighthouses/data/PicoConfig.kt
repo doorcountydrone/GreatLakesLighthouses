@@ -12,7 +12,7 @@ data class PicoConfig(
     val password: String = "",
     val ledPin: Int = 0,
     val brightness: Float = 0.18f,
-    val minBrightness: Int = 2,
+    val minBrightness: Int = 0,
     val maxBrightness: Int = 18,
     val numLeds: Int = 13,
     val cycleDelay: Int = 300,

@@ -461,7 +461,7 @@ private fun CatalogPickerDialog(
                                     )
                                     if (onMap) {
                                         Text(
-                                            text = "Already on this map",
+                                            text = "Already on this chart",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = Fog,
                                         )

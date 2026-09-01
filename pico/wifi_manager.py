@@ -19,6 +19,13 @@ DEFAULT_MATRIX_SCROLL_SPEED = 7
 DEFAULT_BRIGHTNESS = 0.18
 STARTUP_BRIGHTNESS = 0.2
 BRIGHTNESS_CAP = 30
+LDR_ADC_PIN = 26
+LDR_DRIVE_PIN = 21
+LDR_SAMPLE_MS = 400
+LDR_ADC_LO = 500
+LDR_ADC_HI = 50000
+AP_COLOR = (0, 80, 180)
+AP_FAIL_COLOR = (180, 0, 0)
 
 DEFAULT_SLEEP = {
     "sleep_enabled": False,
@@ -57,11 +64,16 @@ GPIO_NOTES = {
     23: " (internal)",
     24: " (internal)",
     25: " (internal)",
-    26: " (LDR)",
+    21: " (LDR drive)",
+    26: " (LDR ADC)",
 }
 
 led = None
 num_leds = DEFAULT_NUM_LEDS
+ldr_adc = None
+_ldr_filt = None
+_ldr_last_ms = 0
+_ap_rgb = AP_COLOR
 
 
 def _clamp(n, lo, hi):
@@ -83,6 +95,48 @@ def save_config(cfg):
     with open(CONFIG_FILE, "w") as f:
         json.dump(cfg, f)
     return True
+
+
+def load_lighthouse_list():
+    for name in ("lighthouses.json", "lighthouses_defaults.json"):
+        try:
+            with open(name, "r") as f:
+                raw = f.read()
+            if raw.startswith("\ufeff"):
+                raw = raw[1:]
+            if not raw.strip():
+                continue
+            data = json.loads(raw)
+            items = data.get("lighthouses", []) if isinstance(data, dict) else data
+            if isinstance(items, list):
+                return items
+        except Exception:
+            continue
+    return []
+
+
+def save_lighthouse_list(items):
+    cleaned = []
+    for i, raw in enumerate(items):
+        if isinstance(raw, dict):
+            entry = dict(raw)
+            entry["led"] = i
+            cleaned.append(entry)
+    payload = {"version": 3, "order": "list", "lighthouses": cleaned}
+    tmp = "lighthouses_tmp.json"
+    with open(tmp, "w") as f:
+        json.dump(payload, f)
+    try:
+        import os
+        try:
+            os.remove("lighthouses.json")
+        except Exception:
+            pass
+        os.rename(tmp, "lighthouses.json")
+    except Exception:
+        with open("lighthouses.json", "w") as f:
+            json.dump(payload, f)
+    return cleaned
 
 
 def init_strip():
@@ -109,6 +163,84 @@ def set_leds(r, g, b, brightness=None):
     for i in range(num_leds):
         led[i] = (rr, gg, bb)
     led.write()
+
+
+def init_ldr():
+    global ldr_adc
+    try:
+        machine.Pin(LDR_DRIVE_PIN, machine.Pin.OUT).value(1)
+        time.sleep_ms(500)
+        ldr_adc = machine.ADC(0)
+        print("WiFi manager LDR drive GPIO", LDR_DRIVE_PIN, "HIGH, ADC0 GPIO", LDR_ADC_PIN)
+    except Exception as e:
+        ldr_adc = None
+        print("WiFi manager LDR skipped:", e)
+
+
+def _ldr_limits():
+    cfg = merge_defaults(load_config())
+    lo = _clamp(int(cfg.get("min_brightness", 2)), 0, BRIGHTNESS_CAP)
+    hi = _clamp(int(cfg.get("max_brightness", 18)), 1, BRIGHTNESS_CAP)
+    if lo > hi:
+        lo = hi
+    return lo, hi
+
+
+def ldr_level():
+    global _ldr_filt, _ldr_last_ms
+    lo, hi = _ldr_limits()
+    if ldr_adc is None:
+        return hi
+    now = time.ticks_ms()
+    if _ldr_last_ms and time.ticks_diff(now, _ldr_last_ms) < LDR_SAMPLE_MS and _ldr_filt is not None:
+        return _clamp(int(_ldr_filt * (hi - lo) + lo + 0.5), lo, hi)
+    _ldr_last_ms = now
+    try:
+        acc = 0
+        for _ in range(4):
+            acc += ldr_adc.read_u16()
+        raw = acc >> 2
+    except Exception:
+        return hi
+    span = float(LDR_ADC_HI - LDR_ADC_LO)
+    if span < 1:
+        span = 1
+    t = (raw - LDR_ADC_LO) / span
+    if t < 0.0:
+        t = 0.0
+    elif t > 1.0:
+        t = 1.0
+    if _ldr_filt is None:
+        _ldr_filt = t
+    else:
+        _ldr_filt = _ldr_filt * 0.75 + t * 0.25
+    return _clamp(int(_ldr_filt * (hi - lo) + lo + 0.5), lo, hi)
+
+
+def paint_status(rgb):
+    global _ap_rgb
+    _ap_rgb = rgb
+    if led is None:
+        return
+    r, g, b = rgb
+    level = ldr_level()
+    peak = max(r, g, b)
+    pwm = _clamp(int(level * 255 / BRIGHTNESS_CAP), 1, 255) if level else 0
+    if peak <= 0:
+        c = (0, 0, 0)
+    else:
+        c = (
+            _clamp(r * pwm // peak, 0, 255),
+            _clamp(g * pwm // peak, 0, 255),
+            _clamp(b * pwm // peak, 0, 255),
+        )
+    for i in range(num_leds):
+        led[i] = c
+    led.write()
+
+
+def refresh_status_lights():
+    paint_status(_ap_rgb)
 
 
 def clear_leds():
@@ -270,7 +402,7 @@ def merge_defaults(cfg):
         "matrix_scroll": DEFAULT_MATRIX_SCROLL,
         "matrix_scroll_speed": DEFAULT_MATRIX_SCROLL_SPEED,
         "brightness": DEFAULT_BRIGHTNESS,
-        "min_brightness": 2,
+        "min_brightness": 0,
         "max_brightness": _clamp(int(round(DEFAULT_BRIGHTNESS * 255)), 1, BRIGHTNESS_CAP),
         "beacon_pulse": True,
         "cycle_delay": 300,
@@ -379,6 +511,17 @@ def send_json(conn, obj, status="200 OK"):
     send(conn, status, "application/json", json.dumps(obj))
 
 
+def send_options(conn):
+    hdr = (
+        "HTTP/1.1 204 No Content\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
+        "Content-Length: 0\r\nConnection: close\r\n\r\n"
+    )
+    _send_all(conn, hdr.encode())
+
+
 def _html_attr(value):
     s = str(value)
     s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -475,7 +618,7 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <div><label>Min brightness (0-30)</label><input name="min_brightness" type="number" min="0" max="30" value="__MINB__"></div>
 <div><label>Max brightness (1-30)</label><input name="max_brightness" type="number" min="1" max="30" value="__MAXB__"></div>
 </div>
-<p class="note">Max 30 is plenty for a wall map. Min 2 keeps WS2812 colors correct in the dark.</p>
+<p class="note">Max 30 is plenty for a wall chart. Min 2 keeps WS2812 colors correct in the dark.</p>
 <label>Refresh seconds</label>
 <input name="cycle_delay" type="number" min="30" max="3600" value="__CYCLE__">
 <label><input name="beacon_pulse" type="checkbox" value="1" __BEACON__ style="width:auto"> Beacon pulse on clear weather</label>
@@ -506,19 +649,20 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <button type="submit">Save &amp; Reboot</button>
 </form>
 <h2>Firmware update</h2>
-<p class="note">The map must already be on home Wi-Fi with internet. This does not change your light list or Wi-Fi password. The map restarts when the update starts.</p>
+<p class="note">The chart must already be on home Wi-Fi with internet. This does not change your light list or Wi-Fi password. The chart restarts when the update starts.</p>
 <form action="/start-update" method="post">
 <button type="submit">Install firmware update</button>
 </form>
 </div>
 <div id="panelHelp">
-<iframe src="/help" title="Help" style="width:100%;min-height:75vh;border:0;background:#0B1F3A"></iframe>
+<iframe id="helpFrame" title="Help" style="width:100%;min-height:75vh;border:0;background:#0B1F3A"></iframe>
 </div>
 <div id="overlay" onclick="if(event.target.id==='overlay')closeModal()">
 <div class="box" id="modalBox"></div>
 </div>
 <script>
-var lights=[], catalog=null, catShore=null, catQuery='';
+var lights=__LIGHTS_JSON__;
+var catalog=null, catShore=null, catQuery='';
 var PRESETS=[
 {char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0],label:'F W - steady white'},
 {char:'F R',color:'R',period_s:1,on_s:[1],off_s:[0],label:'F R - steady red'},
@@ -539,6 +683,10 @@ function showTab(name){
  document.getElementById('tabLights').className=name==='lights'?'on':'';
  document.getElementById('tabSettings').className=name==='settings'?'on':'';
  document.getElementById('tabHelp').className=name==='help'?'on':'';
+ if(name==='help'){
+  var fr=document.getElementById('helpFrame');
+  if(fr && !fr.getAttribute('src')) fr.src='/help';
+ }
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function say(m){document.getElementById('lhStatus').textContent=m||'';}
@@ -575,7 +723,10 @@ function setSkip(i,skip){lights[i].skip=!!skip; render();}
 function removeAt(i){say('Removed '+(lights[i].short_name||lights[i].name||'')); lights.splice(i,1); render();}
 function slug(name){return String(name||'light').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'light';}
 function getJson(url,cb,err){
- fetch(url).then(function(r){return r.json();}).then(cb).catch(function(e){if(err)err(e); else say('Failed: '+e);});
+ fetch(url,{cache:'no-store'}).then(function(r){
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+ }).then(cb).catch(function(e){if(err)err(e); else say('Failed: '+e);});
 }
 function loadLights(){
  say('Loading list...');
@@ -585,10 +736,17 @@ function loadLights(){
 function saveLights(){
  lights.forEach(function(lh,i){lh.led=i;});
  say('Saving...');
- fetch('/lighthouses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lighthouses:lights})})
-  .then(function(r){return r.json();})
+ var body=JSON.stringify({lighthouses:lights});
+ fetch('/lighthouses',{method:'POST',headers:{'Content-Type':'application/json'},body:body,cache:'no-store'})
+  .then(function(r){if(!r.ok) throw new Error('HTTP '+r.status); return r.json();})
   .then(function(data){say(data.ok?'Saved '+(data.count||lights.length)+' lights. Reboot if the strip length changed.':'Save failed: '+(data.message||''));})
-  .catch(function(e){say('Save failed: '+e);});
+  .catch(function(){
+   var f=document.createElement('form');
+   f.method='post'; f.action='/lighthouses';
+   var inp=document.createElement('input');
+   inp.type='hidden'; inp.name='lighthouses'; inp.value=body;
+   f.appendChild(inp); document.body.appendChild(f); f.submit();
+  });
 }
 function restoreDefaults(){
  say('Restoring Kewaunee to Rock Island list...');
@@ -633,7 +791,7 @@ function openCatalog(){
    hits.forEach(function(e,idx){
     var used=onMap(e);
     html+='<div class="hit'+(used?' onmap':'')+'" data-i="'+idx+'"><b>'+esc(e.name)+'</b><div class="amber">'+esc((e.light&&e.light.char)||'')+' · '+esc(e.region||'')+(e.metar?' · '+esc(e.metar):'')+'</div>';
-    html+=used?'<div class="muted">Already on this map</div>':'<div class="muted">Tap to add</div>';
+    html+=used?'<div class="muted">Already on this chart</div>':'<div class="muted">Tap to add</div>';
     html+='</div>';
    });
    html+='</div>';
@@ -681,8 +839,10 @@ function addCustom(){
  render(); say('Added '+name); closeModal();
 }
 function closeModal(){document.getElementById('overlay').style.display='none';}
+if(!Array.isArray(lights)) lights=[];
 showTab('__TAB__');
-loadLights();
+render();
+say('Loaded '+lights.length+' lights');
 </script>
 </body></html>
 """
@@ -713,6 +873,11 @@ loadLights();
     page = page.replace("__WIH__", _html_attr(cfg.get("weekend_on_hour", 6)))
     page = page.replace("__WIM__", _html_attr(cfg.get("weekend_on_minute", 0)))
     page = page.replace("__TAB__", "settings" if not cfg.get("ssid") else "lights")
+    try:
+        items = load_lighthouse_list()
+    except Exception:
+        items = []
+    page = page.replace("__LIGHTS_JSON__", json.dumps(items).replace("<", "\\u003c"))
     return page
 
 
@@ -728,47 +893,69 @@ def success_page(ok, ip):
 
 
 def read_request(conn):
-    conn.settimeout(2)
+    conn.settimeout(5)
     data = b""
-    while True:
+    while b"\r\n\r\n" not in data:
         try:
             chunk = conn.recv(1024)
-            if not chunk:
-                break
-            data += chunk
-            if b"\r\n\r\n" in data:
-                header, body = data.split(b"\r\n\r\n", 1)
-                clen = 0
-                for line in header.split(b"\r\n"):
-                    if line.lower().startswith(b"content-length:"):
-                        try:
-                            clen = int(line.split(b":", 1)[1].strip())
-                        except Exception:
-                            clen = 0
-                while len(body) < clen:
-                    more = conn.recv(1024)
-                    if not more:
-                        break
-                    body += more
-                data = header + b"\r\n\r\n" + body
-                break
         except OSError:
             break
+        if not chunk:
+            break
+        data += chunk
+        if len(data) > 65536:
+            break
+    if b"\r\n\r\n" not in data:
+        try:
+            return data.decode()
+        except Exception:
+            return ""
+    header, body = data.split(b"\r\n\r\n", 1)
+    clen = 0
+    for line in header.split(b"\r\n"):
+        if line.lower().startswith(b"content-length:"):
+            try:
+                clen = int(line.split(b":", 1)[1].strip())
+            except Exception:
+                clen = 0
+    while len(body) < clen:
+        try:
+            more = conn.recv(1024)
+        except OSError:
+            break
+        if not more:
+            break
+        body += more
     try:
-        return data.decode()
+        return (header + b"\r\n\r\n" + body).decode()
     except Exception:
         return ""
 
 
 def start_ap():
+    sta = network.WLAN(network.STA_IF)
+    if sta.active():
+        sta.active(False)
+        time.sleep(1)
     ap = network.WLAN(network.AP_IF)
+    ap.active(False)
+    time.sleep(1)
+    try:
+        ap.config(essid=AP_SSID, password=AP_PASSWORD, authmode=network.AUTH_WPA_WPA2_PSK)
+    except Exception as e:
+        print("AP config:", e)
+        try:
+            ap.config(essid=AP_SSID, password=AP_PASSWORD)
+        except Exception as e2:
+            print("AP config retry:", e2)
     ap.active(True)
-    ap.config(essid=AP_SSID, password=AP_PASSWORD)
-    for _ in range(20):
-        if ap.active():
-            break
-        time.sleep(0.2)
-    print("AP", AP_SSID, ap.ifconfig())
+    time.sleep(2)
+    if ap.active():
+        print("AP", ap.config("essid"), ap.ifconfig())
+        paint_status(AP_COLOR)
+    else:
+        print("AP failed to activate")
+        paint_status(AP_FAIL_COLOR)
     return ap
 
 
@@ -778,6 +965,13 @@ def connect_saved_sta():
     password = cfg.get("password")
     if not ssid:
         return False
+    try:
+        ap = network.WLAN(network.AP_IF)
+        if ap.active():
+            ap.active(False)
+            time.sleep_ms(500)
+    except Exception:
+        pass
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     if not wlan.isconnected():
@@ -801,30 +995,32 @@ def run_server(force_ap=False):
             return
         print("Saved Wi-Fi failed; opening setup AP")
     start_ap()
-    set_leds(40, 30, 0, STARTUP_BRIGHTNESS)
     addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(addr)
-    s.listen(2)
+    s.listen(5)
     s.settimeout(1)
     print("Setup server on 192.168.4.1")
     idle_since = time.time()
     while True:
-        if has_creds and (time.time() - idle_since) > AP_IDLE_REBOOT_S:
+        if has_creds and not force_ap and (time.time() - idle_since) > AP_IDLE_REBOOT_S:
             print("AP idle reboot (will retry home Wi-Fi)")
             machine.reset()
         conn = None
         try:
             conn, _client = s.accept()
         except OSError:
+            refresh_status_lights()
             gc.collect()
             continue
         idle_since = time.time()
         try:
             request = read_request(conn)
             first = request.split("\r\n", 1)[0] if request else ""
-            if first.startswith("GET /status"):
+            if first.startswith("OPTIONS"):
+                send_options(conn)
+            elif first.startswith("GET /status"):
                 send_json(conn, {"ok": True, "mode": "setup", "name": "GreatLakesLighthouses"})
             elif first.startswith("GET /help"):
                 send_static_file(
@@ -838,29 +1034,23 @@ def run_server(force_ap=False):
             elif first.startswith("GET /lighthouses-defaults"):
                 send_json_file(conn, "lighthouses_defaults.json", {"ok": False, "lighthouses": []})
             elif first.startswith("GET /lighthouses"):
-                try:
-                    with open("lighthouses.json", "r") as f:
-                        data = json.load(f)
-                    items = data.get("lighthouses", []) if isinstance(data, dict) else []
-                except Exception:
-                    items = []
-                send_json(conn, {"ok": True, "lighthouses": items})
+                send_json(conn, {"ok": True, "lighthouses": load_lighthouse_list()})
             elif first.startswith("POST /lighthouses"):
                 try:
+                    gc.collect()
                     payload = parse_body(request)
                     items = payload.get("lighthouses") if isinstance(payload, dict) else payload
+                    if isinstance(items, str):
+                        items = json.loads(items)
                     if not isinstance(items, list):
                         raise ValueError("lighthouses list required")
-                    cleaned = []
-                    for i, raw in enumerate(items):
-                        if isinstance(raw, dict):
-                            entry = dict(raw)
-                            entry["led"] = i
-                            cleaned.append(entry)
-                    with open("lighthouses.json", "w") as f:
-                        json.dump({"version": 3, "order": "list", "lighthouses": cleaned})
-                    send_json(conn, {"ok": True, "count": len(cleaned), "message": "saved"})
+                    cleaned = save_lighthouse_list(items)
+                    if "application/json" in request:
+                        send_json(conn, {"ok": True, "count": len(cleaned), "message": "saved"})
+                    else:
+                        send_html(conn, setup_page())
                 except Exception as e:
+                    print("POST /lighthouses:", e)
                     send_json(conn, {"ok": False, "message": str(e)})
             elif first.startswith("GET /config"):
                 out = merge_defaults(load_config())
@@ -911,7 +1101,7 @@ def run_server(force_ap=False):
                             conn,
                             "409 Conflict",
                             "text/plain",
-                            "No update available. The map needs home Wi-Fi and internet to download.",
+                            "No update available. The chart needs home Wi-Fi and internet to download.",
                         )
                 except Exception as e:
                     print("start-update error:", e)
@@ -949,8 +1139,10 @@ def run_server(force_ap=False):
                 conn.close()
                 conn = None
                 machine.reset()
-            else:
+            elif first.startswith("GET /"):
                 send_html(conn, setup_page())
+            else:
+                send(conn, "404 Not Found", "text/plain", "not found")
         except Exception as e:
             print("Request error:", e)
         finally:
@@ -966,5 +1158,6 @@ def start(force_ap=False):
     print("===== Great Lakes Lighthouses WiFi Manager =====")
     gc.collect()
     init_strip()
-    set_leds(40, 30, 0, STARTUP_BRIGHTNESS)
+    init_ldr()
+    paint_status((40, 30, 0))
     run_server(force_ap=force_ap)

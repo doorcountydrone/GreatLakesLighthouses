@@ -157,7 +157,7 @@ fun PicoSettingsScreen(
         matrixScroll = matrixScroll,
         matrixScrollSpeed = matrixScrollSpeed.toInt().coerceIn(MATRIX_SCROLL_SPEED_MIN, MATRIX_SCROLL_SPEED_MAX),
         brightness = maxBrightness / 255f,
-        minBrightness = minBrightness.toIntOrNull()?.coerceIn(0, BRIGHTNESS_SLIDER_MAX) ?: 2,
+        minBrightness = minBrightness.toIntOrNull()?.coerceIn(0, BRIGHTNESS_SLIDER_MAX) ?: 0,
         maxBrightness = maxBrightness.toInt().coerceIn(1, BRIGHTNESS_SLIDER_MAX),
         cycleDelay = cycleDelay.toIntOrNull()?.coerceIn(CYCLE_DELAY_MIN, CYCLE_DELAY_MAX) ?: 300,
         sleepEnabled = sleepEnabled,
@@ -268,7 +268,7 @@ fun PicoSettingsScreen(
 
         SettingsSection(
             title = "Wi-Fi",
-            summary = ssid.ifBlank { "Home network for the map" },
+            summary = ssid.ifBlank { "Home network for the chart" },
             expanded = wifiOpen,
             onToggle = { wifiOpen = !wifiOpen },
         ) {
@@ -407,16 +407,15 @@ fun PicoSettingsScreen(
                 valueRange = 2f..BRIGHTNESS_SLIDER_MAX.toFloat(),
                 enabled = !isLoading,
             )
-            OutlinedTextField(
-                value = minBrightness,
-                onValueChange = { s -> if (s.isEmpty() || s.all { it.isDigit() } && s.toIntOrNull() in 0..BRIGHTNESS_SLIDER_MAX) minBrightness = s },
-                label = { Text("Min brightness (0-$BRIGHTNESS_SLIDER_MAX)") },
-                supportingText = { Text("Use 2 in the dark so WS2812 red and white still look right.") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+            Text(
+                text = "Min brightness: $minBrightness (0 = off in the dark)",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = (minBrightness.toIntOrNull() ?: 0).toFloat().coerceIn(0f, BRIGHTNESS_SLIDER_MAX.toFloat()),
+                onValueChange = { minBrightness = it.toInt().toString() },
+                valueRange = 0f..BRIGHTNESS_SLIDER_MAX.toFloat(),
                 enabled = !isLoading,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = settingsFieldColors(),
             )
             OutlinedTextField(
                 value = cycleDelay,
@@ -426,7 +425,7 @@ fun PicoSettingsScreen(
                     }
                 },
                 label = { Text("Refresh seconds ($CYCLE_DELAY_MIN-$CYCLE_DELAY_MAX)") },
-                supportingText = { Text("How often the map checks online. 300 is every 5 minutes.") },
+                supportingText = { Text("How often the chart checks online. 300 is every 5 minutes.") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading,
@@ -483,7 +482,7 @@ fun PicoSettingsScreen(
             onToggle = { sleepOpen = !sleepOpen },
         ) {
             Text(
-                text = "Times use the UTC offset. The map sets its clock after it joins Wi-Fi.",
+                text = "Times use the UTC offset. The chart sets its clock after it joins Wi-Fi.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Fog,
             )
@@ -629,7 +628,7 @@ fun PicoSettingsScreen(
                 )
             }
             Text(
-                text = "The map must be on home Wi-Fi with internet. Your light list and Wi-Fi stay. The map restarts when the update starts.",
+                text = "The chart must be on home Wi-Fi with internet. Your light list and Wi-Fi stay. The chart restarts when the update starts.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Fog,
             )
