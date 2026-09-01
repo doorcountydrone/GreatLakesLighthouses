@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.19"
+FIRMWARE_VERSION = "0.6.21"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -149,6 +149,8 @@ update_available = False
 update_info = None
 _ota_btn = None
 _ota_down_ms = None
+_ota_banner_done = False
+_ota_scroll_pending = False
 sleep_cfg = {
     "sleep_enabled": False,
     "sleep_at_hour": 22,
@@ -698,8 +700,9 @@ def fetch_metars():
             print("METAR", sid, "xml failed:", e)
     status["stations"] = found
     status["last_fetch"] = time.time()
-    _matrix_need_text = True
-    _oled_msgs = []
+    if not _ota_scroll_pending:
+        _matrix_need_text = True
+        _oled_msgs = []
     still = [sid for sid in ids if sid not in found]
     print("Got", len(found), "stations", list(found.keys()))
     for sid in found:
@@ -1003,7 +1006,10 @@ def _ota_scroll_text():
 
 
 def _announce_ota():
-    global _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_need_text
+    global _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_need_text, _ota_scroll_pending
+    if _ota_banner_done:
+        return
+    _ota_scroll_pending = True
     _oled_blank_until = 0
     _oled_msgs = [("UPDATE", _ota_scroll_text())]
     _oled_msg_i = 0
@@ -1281,7 +1287,7 @@ def _matrix_light_segments():
 
 
 def refresh_matrix():
-    global _matrix_need_text, _matrix_ip_done, _matrix_idle_until, _matrix_idle_pass
+    global _matrix_need_text, _matrix_ip_done, _matrix_idle_until, _matrix_idle_pass, _ota_banner_done, _ota_scroll_pending
     try:
         import led_matrix
     except ImportError:
@@ -1294,13 +1300,14 @@ def refresh_matrix():
         return
     now = time.ticks_ms()
     segs = []
-    if not _matrix_ip_done:
-        ip = status.get("ip")
-        if ip:
-            segs.append((str(ip), (255, 180, 48)))
-    if update_available:
+    if _ota_scroll_pending:
         segs.append((_ota_scroll_text(), (255, 140, 0)))
-    segs.extend(_matrix_light_segments())
+    else:
+        if not _matrix_ip_done:
+            ip = status.get("ip")
+            if ip:
+                segs.append((str(ip), (255, 180, 48)))
+        segs.extend(_matrix_light_segments())
     idle = not segs
     if idle:
         if _matrix_idle_until and time.ticks_diff(now, _matrix_idle_until) < 0:
@@ -1315,6 +1322,9 @@ def refresh_matrix():
     pwm = _pwm_from_slider(_ldr_level())
     if led_matrix.tick(pwm, False):
         _matrix_need_text = True
+        if _ota_scroll_pending:
+            _ota_scroll_pending = False
+            _ota_banner_done = True
         _matrix_ip_done = True
         if _matrix_idle_pass:
             _matrix_idle_until = time.ticks_add(now, MATRIX_IDLE_MS)
@@ -1444,8 +1454,6 @@ def _oled_messages():
         ip = status.get("ip")
         if ip:
             msgs.append(("IP", str(ip)))
-    if update_available:
-        msgs.append(("UPDATE", _ota_scroll_text()))
     cur = []
     for text, _color in _matrix_light_segments():
         if text == "-":
@@ -1462,7 +1470,7 @@ def _oled_messages():
 
 
 def refresh_oled():
-    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_ip_done
+    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_ip_done, _ota_banner_done, _ota_scroll_pending
     if oled is None:
         return
     now = time.ticks_ms()
@@ -1503,7 +1511,14 @@ def refresh_oled():
             oled.fill(0)
             _oled_print_centered(0, title)
             oled.show()
-            pause = MATRIX_IDLE_MS if msg == "GREAT LAKES LIGHTHOUSES" else 800
+            if title == "UPDATE":
+                pause = 400
+                _ota_scroll_pending = False
+                _ota_banner_done = True
+            elif msg == "GREAT LAKES LIGHTHOUSES":
+                pause = MATRIX_IDLE_MS
+            else:
+                pause = 800
             _oled_blank_until = time.ticks_add(now, pause)
             _oled_msg_i += 1
             _oled_x = 128
@@ -1562,6 +1577,8 @@ def main():
             if now - last_fetch >= CYCLE_DELAY:
                 if not in_sleep_window():
                     fetch_metars()
+                    if not update_available:
+                        check_for_ota()
                 last_fetch = now
                 gc.collect()
             render_frame()
