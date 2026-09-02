@@ -73,6 +73,8 @@ num_leds = DEFAULT_NUM_LEDS
 ldr_adc = None
 _ldr_filt = None
 _ldr_last_ms = 0
+_adc_lo = LDR_ADC_LO
+_adc_hi = LDR_ADC_HI
 _ap_rgb = AP_COLOR
 
 
@@ -171,7 +173,8 @@ def init_ldr():
         machine.Pin(LDR_DRIVE_PIN, machine.Pin.OUT).value(1)
         time.sleep_ms(500)
         ldr_adc = machine.ADC(0)
-        print("WiFi manager LDR drive GPIO", LDR_DRIVE_PIN, "HIGH, ADC0 GPIO", LDR_ADC_PIN)
+        level = ldr_level()
+        print("WiFi manager LDR drive GPIO", LDR_DRIVE_PIN, "HIGH, ADC0 GPIO", LDR_ADC_PIN, "->", level)
     except Exception as e:
         ldr_adc = None
         print("WiFi manager LDR skipped:", e)
@@ -179,15 +182,24 @@ def init_ldr():
 
 def _ldr_limits():
     cfg = merge_defaults(load_config())
-    lo = _clamp(int(cfg.get("min_brightness", 2)), 0, BRIGHTNESS_CAP)
+    lo = _clamp(int(cfg.get("min_brightness", 0)), 0, BRIGHTNESS_CAP)
     hi = _clamp(int(cfg.get("max_brightness", 18)), 1, BRIGHTNESS_CAP)
     if lo > hi:
         lo = hi
     return lo, hi
 
 
+def _pwm_from_slider(level):
+    """Same as main.py: 0 = off, 1–8 = raw WS2812 counts, 30 = full."""
+    if level <= 0:
+        return 0
+    if level <= 8:
+        return int(level)
+    return _clamp(int(8 + (level - 8) * (255 - 8) / (BRIGHTNESS_CAP - 8)), 0, 255)
+
+
 def ldr_level():
-    global _ldr_filt, _ldr_last_ms
+    global _ldr_filt, _ldr_last_ms, _adc_lo, _adc_hi
     lo, hi = _ldr_limits()
     if ldr_adc is None:
         return hi
@@ -202,18 +214,19 @@ def ldr_level():
         raw = acc >> 2
     except Exception:
         return hi
-    span = float(LDR_ADC_HI - LDR_ADC_LO)
+    if raw < _adc_lo:
+        _adc_lo = raw
+    if raw > _adc_hi:
+        _adc_hi = raw
+    span = float(_adc_hi - _adc_lo)
     if span < 1:
         span = 1
-    t = (raw - LDR_ADC_LO) / span
+    t = (raw - _adc_lo) / span
     if t < 0.0:
         t = 0.0
     elif t > 1.0:
         t = 1.0
-    if _ldr_filt is None:
-        _ldr_filt = t
-    else:
-        _ldr_filt = _ldr_filt * 0.75 + t * 0.25
+    _ldr_filt = t
     return _clamp(int(_ldr_filt * (hi - lo) + lo + 0.5), lo, hi)
 
 
@@ -223,17 +236,12 @@ def paint_status(rgb):
     if led is None:
         return
     r, g, b = rgb
-    level = ldr_level()
-    peak = max(r, g, b)
-    pwm = _clamp(int(level * 255 / BRIGHTNESS_CAP), 1, 255) if level else 0
-    if peak <= 0:
-        c = (0, 0, 0)
-    else:
-        c = (
-            _clamp(r * pwm // peak, 0, 255),
-            _clamp(g * pwm // peak, 0, 255),
-            _clamp(b * pwm // peak, 0, 255),
-        )
+    pwm = _pwm_from_slider(ldr_level())
+    c = (
+        _clamp(r * pwm // 255, 0, 255),
+        _clamp(g * pwm // 255, 0, 255),
+        _clamp(b * pwm // 255, 0, 255),
+    )
     for i in range(num_leds):
         led[i] = c
     led.write()
@@ -1039,6 +1047,7 @@ def run_server(force_ap=False):
             gc.collect()
             continue
         idle_since = time.time()
+        refresh_status_lights()
         try:
             request = read_request(conn)
             first = request.split("\r\n", 1)[0] if request else ""

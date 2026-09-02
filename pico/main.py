@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.21"
+FIRMWARE_VERSION = "0.6.22"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -46,6 +46,8 @@ OLED_SDA_PIN = 16
 OLED_SCL_PIN = 17
 OLED_VCC_PIN = 18
 OLED_GND_PIN = 19
+# Yellow band is y=0–15. sans18 is ~18px, so "g" sits one row into blue at y=0.
+OLED_TITLE_Y = -1
 MATRIX_IDLE_MS = 15000
 MATRIX_IDLE_COLOR = (40, 200, 210)
 MATRIX_SCROLL_SPEED = 7
@@ -1022,7 +1024,7 @@ def _announce_ota():
     if oled is not None:
         try:
             oled.fill(0)
-            _oled_print_centered(0, "UPDATE")
+            _oled_print_centered(OLED_TITLE_Y, "UPDATE")
             _oled_print_centered(32, "PRESS BTN")
             oled.show()
         except Exception:
@@ -1351,7 +1353,7 @@ def init_oled():
         oled.contrast(128)
         oled.fill(0)
         # Dual-color 128x64: yellow y=0-15, blue y=16-63. sans18 is ~18px.
-        _oled_print_centered(0, "Great Lakes")
+        _oled_print_centered(OLED_TITLE_Y, "Lighthouses")
         _oled_print(32, "v" + FIRMWARE_VERSION)
         oled.show()
         print("OLED on SDA", OLED_SDA_PIN, "SCL", OLED_SCL_PIN, "font", "sans18" if fonts_available else "8x8")
@@ -1465,7 +1467,7 @@ def _oled_messages():
     if cur:
         msgs.append((cur[0], "  ".join(cur)))
     if not msgs:
-        msgs.append(("Great Lakes", "GREAT LAKES LIGHTHOUSES"))
+        msgs.append(("Lighthouses", "GREAT LAKES LIGHTHOUSES"))
     return msgs
 
 
@@ -1480,7 +1482,7 @@ def refresh_oled():
         _oled_last_ms = now
         try:
             oled.fill(0)
-            _oled_print_centered(0, "Sleep")
+            _oled_print_centered(OLED_TITLE_Y, "Sleep")
             oled.show()
         except Exception as e:
             print("OLED:", e)
@@ -1502,14 +1504,14 @@ def refresh_oled():
         title, msg = _oled_msgs[_oled_msg_i]
         tw = _oled_str_w(msg)
         oled.fill(0)
-        _oled_print_centered(0, title)
+        _oled_print_centered(OLED_TITLE_Y, title)
         if _oled_x < 128 and _oled_x + tw > 0:
             _oled_print_at(_oled_x, 32, msg)
         oled.show()
         _oled_x -= max(2, MATRIX_SCROLL_SPEED)
         if _oled_x + tw < 0:
             oled.fill(0)
-            _oled_print_centered(0, title)
+            _oled_print_centered(OLED_TITLE_Y, title)
             oled.show()
             if title == "UPDATE":
                 pause = 400
