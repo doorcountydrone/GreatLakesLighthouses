@@ -67,6 +67,7 @@ import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MAX
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MIN
 import com.doorcountylighthouses.data.PicoConfig
 import com.doorcountylighthouses.pico.PicoConfigApi
+import com.doorcountylighthouses.pico.PicoDiscovery
 import com.doorcountylighthouses.pico.PicoUrls
 import com.doorcountylighthouses.ui.theme.Amber
 import com.doorcountylighthouses.ui.theme.Fog
@@ -188,6 +189,7 @@ fun PicoSettingsScreen(
             when (val result = api.fetch(url)) {
                 is PicoConfigApi.FetchResult.Success -> {
                     applyConfig(result.config)
+                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                     if (result.config.updateAvailable) updateOpen = true
                     statusMessage = "Loaded settings from Pico" +
                         (result.config.firmwareVersion?.let { " (v$it)" } ?: "")
@@ -206,8 +208,10 @@ fun PicoSettingsScreen(
             val url = PicoUrls.normalize(picoBaseUrl)
             if (url != picoBaseUrl) onPicoBaseUrlChange(url)
             when (val result = api.save(url, currentConfig(), reboot)) {
-                PicoConfigApi.SaveResult.Success ->
+                is PicoConfigApi.SaveResult.Success -> {
+                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                     statusMessage = if (reboot) "Saved. Pico is rebooting." else "Saved settings"
+                }
                 is PicoConfigApi.SaveResult.Error ->
                     statusMessage = "Save failed: ${result.message}. Copy firmware 0.4.0+ to the Pico."
             }
@@ -263,13 +267,31 @@ fun PicoSettingsScreen(
             value = picoBaseUrl,
             onValueChange = onPicoBaseUrlChange,
             label = { Text("Pico address") },
-            supportingText = { Text("GreatLakes-Setup: 192.168.4.1  ·  Home Wi-Fi: Pico LAN IP") },
+            supportingText = { Text("Find chart, or Fetch — it tries this address, the last home IP, and 192.168.4.1") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading,
             colors = settingsFieldColors(),
         )
+        OutlinedButton(
+            onClick = {
+                isLoading = true
+                statusMessage = "Looking for the chart on this Wi-Fi…"
+                scope.launch {
+                    when (val result = PicoDiscovery.find(context, picoBaseUrl)) {
+                        is PicoDiscovery.Result.Found -> {
+                            onPicoBaseUrlChange(result.url)
+                            statusMessage = result.message
+                        }
+                        is PicoDiscovery.Result.Error -> statusMessage = result.message
+                    }
+                    isLoading = false
+                }
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Find chart") }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = { loadFromPico() },

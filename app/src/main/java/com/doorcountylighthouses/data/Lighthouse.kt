@@ -21,6 +21,10 @@ data class Lighthouse(
 ) {
     val hasCoordinates: Boolean
         get() = lat != 0.0 || lon != 0.0
+
+    /** Number on the strip and in the UI. First light is 1. [led] is 0-based on the wire. */
+    val displayLed: Int
+        get() = led + 1
 }
 
 data class LightPreset(

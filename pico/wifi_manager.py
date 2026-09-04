@@ -76,6 +76,14 @@ _ldr_last_ms = 0
 _adc_lo = LDR_ADC_LO
 _adc_hi = LDR_ADC_HI
 _ap_rgb = AP_COLOR
+_identify_led = None
+_identify_until = 0
+_identify_rgb = (255, 255, 255)
+LIGHT_RGB = {
+    "W": (255, 255, 255),
+    "R": (255, 12, 0),
+    "G": (0, 220, 70),
+}
 
 
 def _clamp(n, lo, hi):
@@ -247,7 +255,66 @@ def paint_status(rgb):
     led.write()
 
 
+def _light_rgb(code):
+    try:
+        import sys
+        table = getattr(sys.modules.get("__main__"), "LIGHT_RGB", None)
+        if table:
+            return table.get(str(code or "W").upper(), table.get("W", (255, 255, 255)))
+    except Exception:
+        pass
+    return LIGHT_RGB.get(str(code or "W").upper(), LIGHT_RGB["W"])
+
+
+def start_identify(led_i, ms=8000):
+    global _identify_led, _identify_until, _identify_rgb
+    led_i = int(led_i)
+    hold = _clamp(int(ms), 500, 30000)
+    _identify_led = led_i
+    _identify_until = time.ticks_add(time.ticks_ms(), hold)
+    _identify_rgb = LIGHT_RGB["W"]
+    for item in load_lighthouse_list():
+        try:
+            if int(item.get("led", -1)) != led_i:
+                continue
+        except Exception:
+            continue
+        light = item.get("light") if isinstance(item.get("light"), dict) else {}
+        _identify_rgb = _light_rgb(light.get("color") or item.get("light_color") or "W")
+        break
+    paint_identify()
+    return hold
+
+
+def clear_identify():
+    global _identify_led, _identify_until
+    _identify_led = None
+    _identify_until = 0
+
+
+def paint_identify():
+    if led is None or _identify_led is None:
+        return
+    pwm = _pwm_from_slider(ldr_level())
+    r, g, b = _identify_rgb
+    c = (
+        _clamp(r * pwm // 255, 0, 255),
+        _clamp(g * pwm // 255, 0, 255),
+        _clamp(b * pwm // 255, 0, 255),
+    )
+    for i in range(num_leds):
+        led[i] = c if i == _identify_led else (0, 0, 0)
+    led.write()
+
+
 def refresh_status_lights():
+    global _identify_led
+    if _identify_led is not None:
+        if time.ticks_diff(_identify_until, time.ticks_ms()) <= 0:
+            clear_identify()
+        else:
+            paint_identify()
+            return
     paint_status(_ap_rgb)
 
 
@@ -282,6 +349,44 @@ def parse_urlencoded(body):
         k, v = pair.split("=", 1)
         params[urldecode(k)] = urldecode(v)
     return params
+
+
+def _query_int(request, key):
+    first = request.split("\r\n", 1)[0] if request else ""
+    parts = first.split(" ", 2)
+    if len(parts) < 2 or "?" not in parts[1]:
+        return None
+    qs = parts[1].split("?", 1)[1]
+    for pair in qs.split("&"):
+        if "=" not in pair:
+            continue
+        k, v = pair.split("=", 1)
+        if urldecode(k) == key:
+            try:
+                return int(urldecode(v))
+            except Exception:
+                return None
+    return None
+
+
+def parse_identify(request):
+    led = _query_int(request, "led")
+    hold = _query_int(request, "ms")
+    if hold is None:
+        hold = 8000
+    payload = parse_body(request)
+    if isinstance(payload, dict):
+        if "led" in payload and str(payload.get("led")) != "":
+            try:
+                led = int(payload.get("led"))
+            except Exception:
+                pass
+        if "ms" in payload and str(payload.get("ms")) != "":
+            try:
+                hold = int(payload.get("ms"))
+            except Exception:
+                pass
+    return led, hold
 
 
 def parse_body(request):
@@ -561,7 +666,7 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 .actions button{width:auto;margin-top:8px;padding:8px 12px}
 .card{background:#16324F;border-radius:10px;padding:10px;margin-top:8px;display:flex;align-items:center;gap:8px}
 .card.skip{opacity:.5}
-.led{min-width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;background:rgba(255,236,212,.2)}
+.led{min-width:36px;width:36px;height:36px;margin:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;background:rgba(255,236,212,.2);border:0;cursor:pointer}
 .grow{flex:1;min-width:0}
 .amber{color:#E8A838;font-size:.85rem}
 .muted{color:#A8B5C4;font-size:.75rem}
@@ -587,7 +692,7 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <button type="button" id="tabHelp" onclick="showTab('help')">Help</button>
 </div>
 <div id="panelLights">
-<p class="note">List order is LED order (south to north). Skip a light to leave that LED off. Save when the strip matches.</p>
+<p class="note">List order is LED order (south to north). LED 1 is first on the strip. Skip a light to leave that LED off. Tap an LED number to light only that LED for a few seconds — works on GreatLakes-Setup. Save when the strip matches.</p>
 <div class="actions">
 <button type="button" onclick="saveLights()">Save list</button>
 <button type="button" class="tiny" onclick="loadLights()">Reload</button>
@@ -718,7 +823,7 @@ function render(){
   html+='<div class="card'+(lh.skip?' skip':'')+'">';
   html+='<div><button type="button" class="tiny" onclick="move('+i+',-1)">Up</button><br>';
   html+='<button type="button" class="tiny" onclick="move('+i+',1)">Down</button></div>';
-  html+='<div class="led" style="color:'+swatch(c)+'">'+i+'</div>';
+  html+='<button type="button" class="led" style="color:'+swatch(c)+'" title="Light only this LED" onclick="identify('+i+')">'+(i+1)+'</button>';
   html+='<div class="grow"><div>'+esc(lh.name||lh.short_name||('LED '+i))+'</div>';
   html+='<div class="amber">'+esc(charOf(lh)||'-')+'</div>';
   if(lh.metar) html+='<div class="muted">'+esc(lh.metar)+'</div>';
@@ -727,6 +832,13 @@ function render(){
  });
  document.getElementById('lhList').innerHTML=html||'<p class="note">No lights yet. Add from the catalog or restore defaults.</p>';
  syncLedCount();
+}
+function identify(i){
+ say('Lighting LED '+(i+1)+'...');
+ fetch('/identify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({led:i,ms:8000}),cache:'no-store'})
+  .then(function(r){if(!r.ok) throw new Error('HTTP '+r.status); return r.json();})
+  .then(function(data){say(data.identifying?'LED '+(i+1)+' only for '+Math.round((data.ms||8000)/1000)+'s':'Identify cleared');})
+  .catch(function(e){say('Identify failed: '+e);});
 }
 function move(i,d){var j=i+d; if(j<0||j>=lights.length) return; var t=lights[i]; lights[i]=lights[j]; lights[j]=t; render();}
 function setSkip(i,skip){lights[i].skip=!!skip; render();}
@@ -1076,6 +1188,15 @@ def run_server(force_ap=False):
                 send_json_file(conn, "lighthouses_defaults.json", {"ok": False, "lighthouses": []})
             elif first.startswith("GET /lighthouses"):
                 send_json(conn, {"ok": True, "lighthouses": load_lighthouse_list()})
+            elif first.startswith("GET /identify") or first.startswith("POST /identify"):
+                led, hold = parse_identify(request)
+                if led is None or int(led) < 0:
+                    clear_identify()
+                    refresh_status_lights()
+                    send_json(conn, {"ok": True, "identifying": False})
+                else:
+                    ms = start_identify(int(led), hold)
+                    send_json(conn, {"ok": True, "identifying": True, "led": int(led), "ms": ms})
             elif first.startswith("POST /lighthouses"):
                 try:
                     gc.collect()

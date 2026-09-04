@@ -4,12 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,11 +41,11 @@ import android.graphics.Paint
 import android.graphics.Path
 import com.doorcountylighthouses.BuildConfig
 import com.doorcountylighthouses.data.Lighthouse
-import com.doorcountylighthouses.data.LighthouseRepository
 import com.doorcountylighthouses.pico.PicoLighthousesApi
 import com.doorcountylighthouses.pico.PicoUrls
 import kotlinx.coroutines.launch
 import com.doorcountylighthouses.ui.theme.Amber
+import com.doorcountylighthouses.ui.theme.CardNavy
 import com.doorcountylighthouses.ui.theme.Cream
 import com.doorcountylighthouses.ui.theme.Fog
 import com.doorcountylighthouses.ui.theme.Navy
@@ -58,15 +67,19 @@ private val DoorCounty = LatLng(45.05, -87.12)
 @Composable
 fun ChartScreen(
     picoBaseUrl: String,
+    onPicoBaseUrlChange: (String) -> Unit,
+    lights: List<Lighthouse>,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val picoApi = remember { PicoLighthousesApi(context) }
-    var lights by remember { mutableStateOf(LighthouseRepository.load(context)) }
+    var selected by remember { mutableStateOf<Lighthouse?>(null) }
+    var identifying by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
-        lights = LighthouseRepository.load(context)
+    LaunchedEffect(lights, selected?.id) {
+        val id = selected?.id ?: return@LaunchedEffect
+        selected = lights.find { it.id == id }
     }
     val placed = remember(lights) { lights.filter { it.hasCoordinates } }
     val missing = lights.size - placed.size
@@ -74,14 +87,18 @@ fun ChartScreen(
     fun identify(light: Lighthouse) {
         val led = light.led
         val label = light.shortName.ifBlank { light.name }
-        statusMessage = "Identifying LED ${led + 1} ($label) on the Pico…"
+        identifying = true
+        statusMessage = "Identifying LED ${light.displayLed} ($label) on the Pico…"
         scope.launch {
             statusMessage = when (val result = picoApi.identify(PicoUrls.normalize(picoBaseUrl), led)) {
-                is PicoLighthousesApi.IdentifyResult.Success ->
+                is PicoLighthousesApi.IdentifyResult.Success -> {
+                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                     "LED ${result.led + 1} only on the Pico for ${result.ms / 1000} seconds."
+                }
                 is PicoLighthousesApi.IdentifyResult.Error ->
                     "Identify failed: ${result.message}"
             }
+            identifying = false
         }
     }
 
@@ -102,18 +119,11 @@ fun ChartScreen(
                 lights.isEmpty() -> "Fetch your list on the Lights tab."
                 placed.isEmpty() -> "This list has no coordinates yet. Fetch from the Pico or add catalog lights."
                 missing > 0 -> "${placed.size} of ${lights.size} lights on the chart. Custom lights without a location stay off the map."
-                else -> "${placed.size} lights on your list. Tap one to light only that LED on the Pico."
+                else -> "${placed.size} lights on your list. Tap one to see its name, then Identify."
             },
             style = MaterialTheme.typography.bodyMedium,
             color = Cream,
         )
-        statusMessage?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = Amber,
-            )
-        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -134,7 +144,96 @@ fun ChartScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Fog,
                 )
-                else -> LightMap(placed, onIdentify = { identify(it) })
+                else -> LightMap(
+                    placed,
+                    onSelect = {
+                        selected = it
+                        statusMessage = null
+                    },
+                )
+            }
+            selected?.let { light ->
+                LightInfoCard(
+                    light = light,
+                    statusMessage = statusMessage,
+                    identifying = identifying,
+                    onIdentify = { identify(light) },
+                    onDismiss = {
+                        selected = null
+                        statusMessage = null
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LightInfoCard(
+    light: Lighthouse,
+    statusMessage: String?,
+    identifying: Boolean,
+    onIdentify: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val ledNumber = light.displayLed
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardNavy.copy(alpha = 0.96f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = light.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Cream,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = Fog)
+                }
+            }
+            Text(
+                text = light.characteristic.ifBlank { "—" },
+                style = MaterialTheme.typography.bodyMedium,
+                color = Amber,
+            )
+            Text(
+                text = buildString {
+                    append("LED $ledNumber")
+                    if (light.skip) append("  ·  skipped")
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = Fog,
+            )
+            statusMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Amber,
+                )
+            }
+            Button(
+                onClick = onIdentify,
+                enabled = !identifying,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Amber,
+                    contentColor = Navy,
+                ),
+            ) {
+                Text(if (identifying) "Identifying LED $ledNumber…" else "Identify LED $ledNumber")
             }
         }
     }
@@ -143,7 +242,7 @@ fun ChartScreen(
 @Composable
 private fun LightMap(
     lights: List<Lighthouse>,
-    onIdentify: (Lighthouse) -> Unit,
+    onSelect: (Lighthouse) -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
     val density = context.resources.displayMetrics.density
@@ -181,7 +280,7 @@ private fun LightMap(
                             state = rememberMarkerState(position = LatLng(light.lat, light.lon)),
                             title = light.shortName.ifBlank { light.name },
                             snippet = buildString {
-                                append("LED ${light.led + 1}")
+                                append("LED ${light.displayLed}")
                                 if (light.characteristic.isNotBlank()) append("  ${light.characteristic}")
                                 if (light.skip) append("  skipped")
                             },
@@ -189,8 +288,8 @@ private fun LightMap(
                             anchor = Offset(0.5f, ready.anchorY),
                             alpha = if (light.skip) 0.55f else 1f,
                             onClick = {
-                                onIdentify(light)
-                                false
+                                onSelect(light)
+                                true
                             },
                         )
                     }
@@ -262,7 +361,7 @@ private class LighthouseIcons(private val scale: Float) {
             light.lightColor.equals("G", ignoreCase = true) -> "G"
             else -> "W"
         }
-        val led = light.led + 1
+        val led = light.displayLed
         return cache.getOrPut("$colorKey-$led") {
             val body: Int
             val lamp: Int

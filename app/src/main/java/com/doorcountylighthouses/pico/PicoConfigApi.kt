@@ -5,6 +5,8 @@ import com.doorcountylighthouses.data.BRIGHTNESS_SLIDER_MAX
 import com.doorcountylighthouses.data.CYCLE_DELAY_MAX
 import com.doorcountylighthouses.data.CYCLE_DELAY_MIN
 import com.doorcountylighthouses.data.PicoConfig
+import com.doorcountylighthouses.data.loadPicoLanUrl
+import com.doorcountylighthouses.data.rememberWorkingPicoUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -12,18 +14,18 @@ import java.net.HttpURLConnection
 
 class PicoConfigApi(private val context: Context) {
     sealed class FetchResult {
-        data class Success(val config: PicoConfig) : FetchResult()
+        data class Success(val config: PicoConfig, val usedUrl: String) : FetchResult()
         data class Error(val message: String) : FetchResult()
     }
 
     sealed class SaveResult {
-        data object Success : SaveResult()
+        data class Success(val usedUrl: String) : SaveResult()
         data class Error(val message: String) : SaveResult()
     }
 
     suspend fun fetch(baseUrl: String): FetchResult = withContext(Dispatchers.IO) {
         var last = "Fetch failed"
-        for (url in PicoUrls.forPath(baseUrl, "config")) {
+        for (url in PicoUrls.forPath(baseUrl, "config", loadPicoLanUrl(context))) {
             when (val result = getOnce(url)) {
                 is FetchResult.Success -> return@withContext result
                 is FetchResult.Error -> last = result.message
@@ -37,9 +39,9 @@ class PicoConfigApi(private val context: Context) {
             val body = toJson(config, reboot)
             var last = "Save failed"
             for (path in listOf("update-config", "configure")) {
-                for (url in PicoUrls.forPath(baseUrl, path)) {
+                for (url in PicoUrls.forPath(baseUrl, path, loadPicoLanUrl(context))) {
                     when (val result = postOnce(url, body)) {
-                        SaveResult.Success -> return@withContext result
+                        is SaveResult.Success -> return@withContext result
                         is SaveResult.Error -> last = result.message
                     }
                 }
@@ -54,7 +56,7 @@ class PicoConfigApi(private val context: Context) {
 
     suspend fun startUpdate(baseUrl: String): UpdateResult = withContext(Dispatchers.IO) {
         var last = "Update failed"
-        for (url in PicoUrls.forPath(baseUrl, "start-update")) {
+        for (url in PicoUrls.forPath(baseUrl, "start-update", loadPicoLanUrl(context))) {
             when (val result = postStartUpdateOnce(url)) {
                 is UpdateResult.Success -> return@withContext result
                 is UpdateResult.Error -> {
@@ -132,7 +134,7 @@ class PicoConfigApi(private val context: Context) {
             if (!json.has("led_pin")) {
                 return FetchResult.Error("Pico firmware is too old for settings. Copy main.py and wifi_manager.py (0.4.0+) to the Pico.")
             }
-            FetchResult.Success(fromJson(json))
+            FetchResult.Success(fromJson(json), rememberWorkingPicoUrl(context, url))
         } catch (e: Exception) {
             FetchResult.Error(PicoUrls.netError(e))
         } finally {
@@ -159,7 +161,7 @@ class PicoConfigApi(private val context: Context) {
                     ?: return SaveResult.Error("Invalid response from Pico")
                 val saved = json.optString("message").contains("saved", ignoreCase = true)
                 if (json.optBoolean("ok", false) && saved) {
-                    SaveResult.Success
+                    SaveResult.Success(rememberWorkingPicoUrl(context, url))
                 } else {
                     SaveResult.Error(json.optString("message", "Pico firmware is too old. Copy 0.4.0+ files."))
                 }

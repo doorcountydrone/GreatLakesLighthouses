@@ -3,6 +3,8 @@ package com.doorcountylighthouses.pico
 import android.content.Context
 import com.doorcountylighthouses.data.Lighthouse
 import com.doorcountylighthouses.data.LighthouseRepository
+import com.doorcountylighthouses.data.loadPicoLanUrl
+import com.doorcountylighthouses.data.rememberWorkingPicoUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -10,18 +12,18 @@ import java.net.HttpURLConnection
 
 class PicoLighthousesApi(private val context: Context) {
     sealed class FetchResult {
-        data class Success(val lights: List<Lighthouse>) : FetchResult()
+        data class Success(val lights: List<Lighthouse>, val usedUrl: String) : FetchResult()
         data class Error(val message: String) : FetchResult()
     }
 
     sealed class SaveResult {
-        data object Success : SaveResult()
+        data class Success(val usedUrl: String) : SaveResult()
         data class Error(val message: String) : SaveResult()
     }
 
     suspend fun fetch(baseUrl: String): FetchResult = withContext(Dispatchers.IO) {
         var last = "Fetch failed"
-        for (url in PicoUrls.forPath(baseUrl, "lighthouses")) {
+        for (url in PicoUrls.forPath(baseUrl, "lighthouses", loadPicoLanUrl(context))) {
             when (val result = getOnce(url)) {
                 is FetchResult.Success -> return@withContext result
                 is FetchResult.Error -> last = result.message
@@ -33,9 +35,9 @@ class PicoLighthousesApi(private val context: Context) {
     suspend fun save(baseUrl: String, lights: List<Lighthouse>): SaveResult = withContext(Dispatchers.IO) {
         val body = LighthouseRepository.toJson(lights)
         var last = "Save failed"
-        for (url in PicoUrls.forPath(baseUrl, "lighthouses")) {
+        for (url in PicoUrls.forPath(baseUrl, "lighthouses", loadPicoLanUrl(context))) {
             when (val result = postOnce(url, body)) {
-                SaveResult.Success -> return@withContext result
+                is SaveResult.Success -> return@withContext result
                 is SaveResult.Error -> last = result.message
             }
         }
@@ -43,7 +45,7 @@ class PicoLighthousesApi(private val context: Context) {
     }
 
     sealed class IdentifyResult {
-        data class Success(val led: Int, val ms: Int) : IdentifyResult()
+        data class Success(val led: Int, val ms: Int, val usedUrl: String) : IdentifyResult()
         data class Error(val message: String) : IdentifyResult()
     }
 
@@ -51,7 +53,7 @@ class PicoLighthousesApi(private val context: Context) {
         withContext(Dispatchers.IO) {
             val body = JSONObject().put("led", led).put("ms", ms).toString()
             var last = "Identify failed"
-            for (url in PicoUrls.forPath(baseUrl, "identify")) {
+            for (url in PicoUrls.forPath(baseUrl, "identify", loadPicoLanUrl(context))) {
                 when (val result = postIdentifyOnce(url, body)) {
                     is IdentifyResult.Success -> return@withContext result
                     is IdentifyResult.Error -> last = result.message
@@ -79,7 +81,7 @@ class PicoLighthousesApi(private val context: Context) {
             }
             val root = runCatching { JSONObject(text) }.getOrNull()
             if (root != null && root.optBoolean("ok", true) && root.optBoolean("identifying", true)) {
-                IdentifyResult.Success(root.optInt("led"), root.optInt("ms", 8000))
+                IdentifyResult.Success(root.optInt("led"), root.optInt("ms", 8000), rememberWorkingPicoUrl(context, url))
             } else if (text.contains("see") && text.contains("/status")) {
                 IdentifyResult.Error("Chart firmware needs 0.6.23+ for identify. Copy main.py or install the update.")
             } else {
@@ -115,7 +117,7 @@ class PicoLighthousesApi(private val context: Context) {
                     add(LighthouseRepository.fromJson(array.getJSONObject(i)))
                 }
             }
-            FetchResult.Success(lights)
+            FetchResult.Success(lights, rememberWorkingPicoUrl(context, url))
         } catch (e: Exception) {
             FetchResult.Error(PicoUrls.netError(e))
         } finally {
@@ -139,7 +141,8 @@ class PicoLighthousesApi(private val context: Context) {
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code in 200..299) {
                 val ok = runCatching { JSONObject(text).optBoolean("ok", true) }.getOrDefault(true)
-                if (ok) SaveResult.Success else SaveResult.Error(JSONObject(text).optString("message", "Failed"))
+                if (ok) SaveResult.Success(rememberWorkingPicoUrl(context, url))
+                else SaveResult.Error(JSONObject(text).optString("message", "Failed"))
             } else {
                 SaveResult.Error("HTTP $code")
             }

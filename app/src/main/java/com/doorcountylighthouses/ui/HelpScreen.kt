@@ -113,10 +113,11 @@ fun HelpScreen(modifier: Modifier = Modifier) {
 
         HelpCard(
             title = "Your light list",
-            body = "• Pico address: 192.168.4.1 on GreatLakes-Setup. After the chart joins home Wi-Fi, use the chart’s home-network address.\n\n" +
+            body = "• Pico address: tap Find chart, or Fetch / Save / Identify. The app tries the box, the last home IP it used, and 192.168.4.1. On success it fills in the working address. LED 1 is the first light on the strip.\n\n" +
                 "• Fetch from Pico / Reload: loads the list that is already on the chart.\n\n" +
                 "• Save to Pico / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights.\n\n" +
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
+                "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
                 "• Drag the handle on the left to reorder. First in the list is the first light on the strip (usually the southernmost). In the browser, use Up / Down.\n\n" +
                 "• Add from catalog: browse by shore (Chicago, Wisconsin, Green Bay, Michigan, Straits) or search by name. Color, flash, and nearest weather station are already filled in. Tap one to add it.\n\n" +
                 "• Add custom: type a name, pick a flash pattern, and optionally a nearby weather station (for example KSUE).\n\n" +
@@ -126,7 +127,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         HelpCard(
             title = "Chart tab",
             body = "Chart shows only the lights on your current list, not the whole catalog. Lighthouse symbols are cream (white lights), red, or green. A faded symbol is skipped. The number under each one is the LED on the strip.\n\n" +
-                "Tap a lighthouse to identify it: the Pico lights only that LED for a few seconds so you can see the wiring order. Your phone must be on the same Wi-Fi as the chart, and the Pico address on the Lights tab must be current.\n\n" +
+                "Tap a lighthouse to open its card: name, characteristic, and LED number. Identify lights only that LED for a few seconds so you can see the wiring order. Same as tapping the LED number on the Lights tab. Your phone must be on the same Wi-Fi as the chart (home Wi-Fi, or GreatLakes-Setup with address 192.168.4.1). The Chart map needs internet for tiles, so on setup Wi-Fi use the Lights tab instead.\n\n" +
                 "Fetch from Pico on the Lights tab first so the map matches the strip. Custom lights without coordinates do not appear.",
         )
 
@@ -182,8 +183,8 @@ fun HelpScreen(modifier: Modifier = Modifier) {
 
         HelpCard(
             title = "App / phone / browser",
-            body = "• Can’t connect: join GreatLakes-Setup (password door1234) and use address 192.168.4.1. Turn off mobile data so the phone stays on that Wi-Fi.\n\n" +
-                "• Fetch or Save failed: your phone must be on the same Wi-Fi as the chart. On setup Wi-Fi that is GreatLakes-Setup. After setup, both must be on your home Wi-Fi, and the Pico address must be the chart’s home-network address.\n\n" +
+            body = "• Can’t connect: join GreatLakes-Setup (password door1234) and tap Find chart, or use address 192.168.4.1. Turn off mobile data so the phone stays on that Wi-Fi.\n\n" +
+                "• Fetch or Save failed: your phone must be on the same Wi-Fi as the chart. Tap Find chart. On setup Wi-Fi that is GreatLakes-Setup. After setup, both must be on your home Wi-Fi.\n\n" +
                 "• Type http:// in front of the address if the page won’t open.\n\n" +
                 "• Phone hotspot: putting the chart on a phone hotspot that uses cellular often fails. Use home or hotel Wi-Fi when you can.",
         )

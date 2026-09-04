@@ -9,11 +9,45 @@ import java.net.URI
 import java.net.URL
 
 object PicoUrls {
+    const val SETUP_ORIGIN = "http://192.168.4.1"
+
     fun normalize(raw: String): String = origins(raw).first()
 
-    fun forPath(raw: String, path: String): List<String> {
+    fun isSetup(raw: String): Boolean = hostOf(raw) == "192.168.4.1"
+
+    fun originOf(requestUrl: String): String {
+        return try {
+            val u = URI(requestUrl)
+            val host = u.host?.trim('[', ']')
+            if (host.isNullOrBlank()) normalize(requestUrl)
+            else if (u.port > 0 && u.port != 80) "http://$host:${u.port}"
+            else "http://$host"
+        } catch (_: Exception) {
+            normalize(requestUrl.substringBeforeLast('/'))
+        }
+    }
+
+    /** Home IP without :8080 so the address field stays simple. */
+    fun preferredOrigin(requestUrl: String): String {
+        val host = hostOf(requestUrl) ?: return normalize(requestUrl)
+        return if (host == "192.168.4.1") SETUP_ORIGIN else "http://$host"
+    }
+
+    fun sameHost(a: String, b: String): Boolean {
+        val ha = hostOf(a) ?: return false
+        val hb = hostOf(b) ?: return false
+        return ha.equals(hb, ignoreCase = true)
+    }
+
+    fun forPath(raw: String, path: String, extraBase: String? = null): List<String> {
         val suffix = "/" + path.trim().trimStart('/')
-        return origins(raw).map { it + suffix }
+        val out = linkedSetOf<String>()
+        origins(raw).forEach { out.add(it + suffix) }
+        if (!extraBase.isNullOrBlank() && !sameHost(raw, extraBase)) {
+            origins(extraBase).forEach { out.add(it + suffix) }
+        }
+        if (!isSetup(raw)) origins(SETUP_ORIGIN).forEach { out.add(it + suffix) }
+        return out.toList()
     }
 
     fun origins(raw: String): List<String> {
@@ -103,6 +137,13 @@ object PicoUrls {
                 "Timed out. Join the same Wi-Fi as the chart and use its home-network IP, not GreatLakes-Setup, unless you are in setup."
             else -> m
         }
+    }
+
+    private fun hostOf(raw: String): String? {
+        val withScheme = if (raw.startsWith("http://", ignoreCase = true) ||
+            raw.startsWith("https://", ignoreCase = true)
+        ) raw else "http://$raw"
+        return hostPort(withScheme)?.first
     }
 
     private fun hostPort(withScheme: String): Pair<String, Int?>? {

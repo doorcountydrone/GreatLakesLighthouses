@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import com.doorcountylighthouses.data.Lighthouse
+import com.doorcountylighthouses.data.LighthouseRepository
 import com.doorcountylighthouses.data.loadPicoBaseUrl
 import com.doorcountylighthouses.data.savePicoBaseUrl
 import com.doorcountylighthouses.ui.ChartScreen
@@ -49,7 +51,7 @@ class MainActivity : ComponentActivity() {
             DoorCountyLighthousesTheme {
                 var showSplash by remember { mutableStateOf(true) }
                 LaunchedEffect(Unit) {
-                    delay(3000)
+                    delay(800)
                     showSplash = false
                 }
                 if (showSplash) {
@@ -65,6 +67,12 @@ class MainActivity : ComponentActivity() {
                     val context = LocalContext.current.applicationContext
                     var selectedTab by remember { mutableIntStateOf(0) }
                     var picoBaseUrl by remember { mutableStateOf(loadPicoBaseUrl(context)) }
+                    var lights by remember { mutableStateOf(LighthouseRepository.load(context)) }
+                    val persistLights: (List<Lighthouse>, Boolean) -> Unit = { next, save ->
+                        val numbered = LighthouseRepository.renumber(next)
+                        lights = numbered
+                        if (save) LighthouseRepository.saveLocal(context, numbered)
+                    }
                     val navColors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Navy,
                         selectedTextColor = Amber,
@@ -118,10 +126,17 @@ class MainActivity : ComponentActivity() {
                                         picoBaseUrl = it
                                         savePicoBaseUrl(context, it)
                                     },
+                                    lights = lights,
+                                    onLightsChange = persistLights,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 1 -> ChartScreen(
                                     picoBaseUrl = picoBaseUrl,
+                                    onPicoBaseUrlChange = {
+                                        picoBaseUrl = it
+                                        savePicoBaseUrl(context, it)
+                                    },
+                                    lights = lights,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 2 -> PicoSettingsScreen(

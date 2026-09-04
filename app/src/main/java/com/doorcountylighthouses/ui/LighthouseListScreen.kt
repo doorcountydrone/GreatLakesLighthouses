@@ -1,6 +1,7 @@
 package com.doorcountylighthouses.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +45,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +66,7 @@ import com.doorcountylighthouses.data.LightPreset
 import com.doorcountylighthouses.data.LightPresets
 import com.doorcountylighthouses.data.Lighthouse
 import com.doorcountylighthouses.data.LighthouseRepository
+import com.doorcountylighthouses.pico.PicoDiscovery
 import com.doorcountylighthouses.pico.PicoLighthousesApi
 import com.doorcountylighthouses.pico.PicoUrls
 import com.doorcountylighthouses.ui.theme.Amber
@@ -82,25 +83,20 @@ import kotlinx.coroutines.launch
 fun LighthouseListScreen(
     picoBaseUrl: String,
     onPicoBaseUrlChange: (String) -> Unit,
+    lights: List<Lighthouse>,
+    onLightsChange: (List<Lighthouse>, save: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val picoApi = remember { PicoLighthousesApi(context) }
-    var lights by remember { mutableStateOf<List<Lighthouse>>(emptyList()) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var showCatalog by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        lights = LighthouseRepository.load(context)
-    }
-
     fun persist(next: List<Lighthouse>, save: Boolean = true) {
-        val numbered = LighthouseRepository.renumber(next)
-        lights = numbered
-        if (save) LighthouseRepository.saveLocal(context, numbered)
+        onLightsChange(next, save)
     }
 
     val haptic = LocalHapticFeedback.current
@@ -112,7 +108,7 @@ fun LighthouseListScreen(
             persist(lights.toMutableList().apply { add(to, removeAt(from)) }, save = false)
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         },
-        onDragEnd = { LighthouseRepository.saveLocal(context, lights) },
+        onDragEnd = { persist(lights) },
     )
 
     LazyColumn(
@@ -140,12 +136,31 @@ fun LighthouseListScreen(
                 onValueChange = onPicoBaseUrlChange,
                 label = { Text("Pico address") },
                 placeholder = { Text("192.168.4.1") },
+                supportingText = { Text("Find chart, or leave this set — Fetch tries setup and the last home IP") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading,
                 colors = fieldColors(),
             )
+            OutlinedButton(
+                onClick = {
+                    isLoading = true
+                    statusMessage = "Looking for the chart on this Wi-Fi…"
+                    scope.launch {
+                        when (val result = PicoDiscovery.find(context, picoBaseUrl)) {
+                            is PicoDiscovery.Result.Found -> {
+                                onPicoBaseUrlChange(result.url)
+                                statusMessage = result.message
+                            }
+                            is PicoDiscovery.Result.Error -> statusMessage = result.message
+                        }
+                        isLoading = false
+                    }
+                },
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Find chart") }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -160,6 +175,7 @@ fun LighthouseListScreen(
                             when (val result = picoApi.fetch(url)) {
                                 is PicoLighthousesApi.FetchResult.Success -> {
                                     persist(result.lights)
+                                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                                     statusMessage = "Fetched ${result.lights.size} lights from Pico"
                                 }
                                 is PicoLighthousesApi.FetchResult.Error ->
@@ -180,8 +196,9 @@ fun LighthouseListScreen(
                             val url = PicoUrls.normalize(picoBaseUrl)
                             if (url != picoBaseUrl) onPicoBaseUrlChange(url)
                             when (val result = picoApi.save(url, lights)) {
-                                PicoLighthousesApi.SaveResult.Success -> {
+                                is PicoLighthousesApi.SaveResult.Success -> {
                                     persist(lights)
+                                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                                     statusMessage = "Saved ${lights.count { !it.skip }} lights to Pico"
                                 }
                                 is PicoLighthousesApi.SaveResult.Error ->
@@ -225,6 +242,11 @@ fun LighthouseListScreen(
                 text = "List (${lights.size} lights, ${lights.count { !it.skip }} on)",
                 style = MaterialTheme.typography.titleSmall,
             )
+            Text(
+                text = "Tap an LED number (1 is the first on the strip) to light only that LED.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Fog,
+            )
             }
         }
         itemsIndexed(
@@ -244,6 +266,21 @@ fun LighthouseListScreen(
                 onDelete = {
                     persist(lights.filterIndexed { i, _ -> i != index })
                     statusMessage = "Removed ${light.shortName}"
+                },
+                onIdentify = {
+                    val url = PicoUrls.normalize(picoBaseUrl)
+                    if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+                    statusMessage = "Identifying LED ${light.displayLed} (${light.shortName.ifBlank { light.name }})…"
+                    scope.launch {
+                        statusMessage = when (val result = picoApi.identify(url, light.led)) {
+                            is PicoLighthousesApi.IdentifyResult.Success -> {
+                                if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
+                                "LED ${result.led + 1} only on the Pico for ${result.ms / 1000} seconds."
+                            }
+                            is PicoLighthousesApi.IdentifyResult.Error ->
+                                "Identify failed: ${result.message}"
+                        }
+                    }
                 },
             )
         }
@@ -279,6 +316,7 @@ private fun EditorCard(
     dragModifier: Modifier,
     onSkipChange: (Boolean) -> Unit,
     onDelete: () -> Unit,
+    onIdentify: () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -306,11 +344,12 @@ private fun EditorCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(ledSwatch(light.lightColor).copy(alpha = 0.22f)),
+                    .background(ledSwatch(light.lightColor).copy(alpha = 0.22f))
+                    .clickable(onClick = onIdentify),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = light.led.toString(),
+                    text = light.displayLed.toString(),
                     style = MaterialTheme.typography.titleMedium,
                     color = if (light.skip) Fog else ledSwatch(light.lightColor),
                 )

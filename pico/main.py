@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.24"
+FIRMWARE_VERSION = "0.6.29"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -55,9 +55,9 @@ BRIGHTNESS_CAP = 30
 DISPLAY_TYPE = "NONE"
 MATRIX_SCROLL = "WEATHER"
 
-# Navigation-light colors (not METAR categories). White is warm lantern, not cool RGB white.
+# Navigation-light colors (not METAR categories).
 LIGHT_RGB = {
-    "W": (255, 236, 180),
+    "W": (255, 255, 255),
     "R": (255, 12, 0),
     "G": (0, 220, 70),
 }
