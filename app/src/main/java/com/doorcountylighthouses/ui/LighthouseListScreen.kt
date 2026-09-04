@@ -35,8 +35,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -65,6 +67,7 @@ import com.doorcountylighthouses.data.LightPresets
 import com.doorcountylighthouses.data.Lighthouse
 import com.doorcountylighthouses.data.LighthouseRepository
 import com.doorcountylighthouses.pico.PicoLighthousesApi
+import com.doorcountylighthouses.pico.PicoUrls
 import com.doorcountylighthouses.ui.theme.Amber
 import com.doorcountylighthouses.ui.theme.CardNavy
 import com.doorcountylighthouses.ui.theme.Cream
@@ -83,7 +86,7 @@ fun LighthouseListScreen(
 ) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
-    val picoApi = remember { PicoLighthousesApi() }
+    val picoApi = remember { PicoLighthousesApi(context) }
     var lights by remember { mutableStateOf<List<Lighthouse>>(emptyList()) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -138,6 +141,7 @@ fun LighthouseListScreen(
                 label = { Text("Pico address") },
                 placeholder = { Text("192.168.4.1") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading,
                 colors = fieldColors(),
@@ -151,7 +155,9 @@ fun LighthouseListScreen(
                         isLoading = true
                         statusMessage = "Fetching from Pico…"
                         scope.launch {
-                            when (val result = picoApi.fetch(picoBaseUrl)) {
+                            val url = PicoUrls.normalize(picoBaseUrl)
+                            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+                            when (val result = picoApi.fetch(url)) {
                                 is PicoLighthousesApi.FetchResult.Success -> {
                                     persist(result.lights)
                                     statusMessage = "Fetched ${result.lights.size} lights from Pico"
@@ -171,7 +177,9 @@ fun LighthouseListScreen(
                         isLoading = true
                         statusMessage = "Saving to Pico…"
                         scope.launch {
-                            when (val result = picoApi.save(picoBaseUrl, lights)) {
+                            val url = PicoUrls.normalize(picoBaseUrl)
+                            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+                            when (val result = picoApi.save(url, lights)) {
                                 PicoLighthousesApi.SaveResult.Success -> {
                                     persist(lights)
                                     statusMessage = "Saved ${lights.count { !it.skip }} lights to Pico"

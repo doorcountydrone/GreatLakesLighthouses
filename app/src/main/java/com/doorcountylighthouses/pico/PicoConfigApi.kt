@@ -1,5 +1,6 @@
 package com.doorcountylighthouses.pico
 
+import android.content.Context
 import com.doorcountylighthouses.data.BRIGHTNESS_SLIDER_MAX
 import com.doorcountylighthouses.data.CYCLE_DELAY_MAX
 import com.doorcountylighthouses.data.CYCLE_DELAY_MIN
@@ -8,10 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URL
 
-class PicoConfigApi {
+class PicoConfigApi(private val context: Context) {
     sealed class FetchResult {
         data class Success(val config: PicoConfig) : FetchResult()
         data class Error(val message: String) : FetchResult()
@@ -24,7 +23,7 @@ class PicoConfigApi {
 
     suspend fun fetch(baseUrl: String): FetchResult = withContext(Dispatchers.IO) {
         var last = "Fetch failed"
-        for (url in configUrls(baseUrl, "config")) {
+        for (url in PicoUrls.forPath(baseUrl, "config")) {
             when (val result = getOnce(url)) {
                 is FetchResult.Success -> return@withContext result
                 is FetchResult.Error -> last = result.message
@@ -38,7 +37,7 @@ class PicoConfigApi {
             val body = toJson(config, reboot)
             var last = "Save failed"
             for (path in listOf("update-config", "configure")) {
-                for (url in configUrls(baseUrl, path)) {
+                for (url in PicoUrls.forPath(baseUrl, path)) {
                     when (val result = postOnce(url, body)) {
                         SaveResult.Success -> return@withContext result
                         is SaveResult.Error -> last = result.message
@@ -55,7 +54,7 @@ class PicoConfigApi {
 
     suspend fun startUpdate(baseUrl: String): UpdateResult = withContext(Dispatchers.IO) {
         var last = "Update failed"
-        for (url in startUpdateUrls(baseUrl)) {
+        for (url in PicoUrls.forPath(baseUrl, "start-update")) {
             when (val result = postStartUpdateOnce(url)) {
                 is UpdateResult.Success -> return@withContext result
                 is UpdateResult.Error -> {
@@ -69,35 +68,12 @@ class PicoConfigApi {
         UpdateResult.Error(last)
     }
 
-    private fun startUpdateUrls(rawBase: String): List<String> {
-        val t = rawBase.trim().trimEnd('/')
-        val withScheme = when {
-            t.startsWith("http://", ignoreCase = true) || t.startsWith("https://", ignoreCase = true) -> t
-            else -> "http://$t"
-        }
-        val uri = try {
-            URI(withScheme)
-        } catch (_: Exception) {
-            return listOf("$withScheme/start-update")
-        }
-        val host = uri.host ?: return listOf("$withScheme/start-update")
-        val scheme = uri.scheme ?: "http"
-        val urls = linkedSetOf<String>()
-        if (uri.port > 0) urls.add("$scheme://$host:${uri.port}/start-update")
-        urls.add("$scheme://$host/start-update")
-        urls.add("$scheme://$host:8080/start-update")
-        return urls.toList()
-    }
-
     private fun postStartUpdateOnce(url: String): UpdateResult {
         var conn: HttpURLConnection? = null
         return try {
-            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            conn = PicoUrls.openConnection(context, url, 15000, 60000).apply {
                 requestMethod = "POST"
                 doOutput = true
-                connectTimeout = 15000
-                readTimeout = 60000
-                setRequestProperty("Connection", "close")
                 setRequestProperty("Content-Type", "text/plain")
                 setRequestProperty("Content-Length", "0")
             }
@@ -133,37 +109,18 @@ class PicoConfigApi {
             if (likelyReboot) {
                 UpdateResult.Success("Update may have started (the chart reboots and drops the connection). Wait about 30 seconds, then Fetch.")
             } else {
-                UpdateResult.Error(e.message ?: e.toString())
+                UpdateResult.Error(PicoUrls.netError(e))
             }
         } finally {
             conn?.disconnect()
         }
     }
 
-    private fun configUrls(rawBase: String, path: String): List<String> {
-        val t = rawBase.trim().trimEnd('/')
-        val withScheme = when {
-            t.startsWith("http://", ignoreCase = true) || t.startsWith("https://", ignoreCase = true) -> t
-            else -> "http://$t"
-        }
-        val origin = try {
-            val u = URI(withScheme)
-            val host = u.host ?: return listOf("$withScheme/$path")
-            val portPart = if (u.port > 0) ":${u.port}" else ""
-            "${u.scheme}://$host$portPart"
-        } catch (_: Exception) {
-            withScheme
-        }.trimEnd('/')
-        return listOf("$origin/$path")
-    }
-
     private fun getOnce(url: String): FetchResult {
         var conn: HttpURLConnection? = null
         return try {
-            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            conn = PicoUrls.openConnection(context, url, 15000, 15000).apply {
                 requestMethod = "GET"
-                connectTimeout = 8000
-                readTimeout = 8000
             }
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
@@ -177,7 +134,7 @@ class PicoConfigApi {
             }
             FetchResult.Success(fromJson(json))
         } catch (e: Exception) {
-            FetchResult.Error(e.message ?: e.toString())
+            FetchResult.Error(PicoUrls.netError(e))
         } finally {
             conn?.disconnect()
         }
@@ -187,11 +144,9 @@ class PicoConfigApi {
         var conn: HttpURLConnection? = null
         return try {
             val bytes = body.toByteArray(Charsets.UTF_8)
-            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            conn = PicoUrls.openConnection(context, url, 15000, 15000).apply {
                 requestMethod = "POST"
                 doOutput = true
-                connectTimeout = 10000
-                readTimeout = 12000
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 setRequestProperty("Content-Length", bytes.size.toString())
             }
@@ -212,7 +167,7 @@ class PicoConfigApi {
                 SaveResult.Error("HTTP $code")
             }
         } catch (e: Exception) {
-            SaveResult.Error(e.message ?: e.toString())
+            SaveResult.Error(PicoUrls.netError(e))
         } finally {
             conn?.disconnect()
         }

@@ -14,5 +14,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+secrets.properties
 tools/wikidata_lh.json
 tools/overpass_lm.json

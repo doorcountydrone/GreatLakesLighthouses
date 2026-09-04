@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -66,6 +67,7 @@ import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MAX
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MIN
 import com.doorcountylighthouses.data.PicoConfig
 import com.doorcountylighthouses.pico.PicoConfigApi
+import com.doorcountylighthouses.pico.PicoUrls
 import com.doorcountylighthouses.ui.theme.Amber
 import com.doorcountylighthouses.ui.theme.Fog
 import kotlinx.coroutines.launch
@@ -77,8 +79,9 @@ fun PicoSettingsScreen(
     onPicoBaseUrlChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
-    val api = remember { PicoConfigApi() }
+    val api = remember { PicoConfigApi(context) }
     var ssid by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -180,7 +183,9 @@ fun PicoSettingsScreen(
         isLoading = true
         statusMessage = "Fetching settings…"
         scope.launch {
-            when (val result = api.fetch(picoBaseUrl)) {
+            val url = PicoUrls.normalize(picoBaseUrl)
+            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+            when (val result = api.fetch(url)) {
                 is PicoConfigApi.FetchResult.Success -> {
                     applyConfig(result.config)
                     if (result.config.updateAvailable) updateOpen = true
@@ -198,7 +203,9 @@ fun PicoSettingsScreen(
         isLoading = true
         statusMessage = if (reboot) "Saving and rebooting…" else "Saving to Pico…"
         scope.launch {
-            when (val result = api.save(picoBaseUrl, currentConfig(), reboot)) {
+            val url = PicoUrls.normalize(picoBaseUrl)
+            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+            when (val result = api.save(url, currentConfig(), reboot)) {
                 PicoConfigApi.SaveResult.Success ->
                     statusMessage = if (reboot) "Saved. Pico is rebooting." else "Saved settings"
                 is PicoConfigApi.SaveResult.Error ->
@@ -212,7 +219,9 @@ fun PicoSettingsScreen(
         isLoading = true
         statusMessage = "Starting firmware update…"
         scope.launch {
-            when (val result = api.startUpdate(picoBaseUrl)) {
+            val url = PicoUrls.normalize(picoBaseUrl)
+            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+            when (val result = api.startUpdate(url)) {
                 is PicoConfigApi.UpdateResult.Success ->
                     statusMessage = result.message
                 is PicoConfigApi.UpdateResult.Error ->
@@ -256,6 +265,7 @@ fun PicoSettingsScreen(
             label = { Text("Pico address") },
             supportingText = { Text("GreatLakes-Setup: 192.168.4.1  ·  Home Wi-Fi: Pico LAN IP") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading,
             colors = settingsFieldColors(),

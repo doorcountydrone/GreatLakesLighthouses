@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.doorcountylighthouses.data.loadPicoBaseUrl
 import com.doorcountylighthouses.data.savePicoBaseUrl
+import com.doorcountylighthouses.ui.ChartScreen
 import com.doorcountylighthouses.ui.HelpScreen
 import com.doorcountylighthouses.ui.LighthouseListScreen
 import com.doorcountylighthouses.ui.PicoSettingsScreen
@@ -81,20 +82,27 @@ class MainActivity : ComponentActivity() {
                                 NavigationBarItem(
                                     selected = selectedTab == 0,
                                     onClick = { selectedTab = 0 },
-                                    icon = { Icon(Icons.Filled.Lightbulb, contentDescription = "Lights") },
+                                    icon = { Icon(painterResource(R.drawable.ic_lighthouse), contentDescription = "Lights") },
                                     label = { Text("Lights") },
                                     colors = navColors,
                                 )
                                 NavigationBarItem(
                                     selected = selectedTab == 1,
                                     onClick = { selectedTab = 1 },
-                                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-                                    label = { Text("Settings") },
+                                    icon = { Icon(Icons.Filled.Map, contentDescription = "Chart") },
+                                    label = { Text("Chart") },
                                     colors = navColors,
                                 )
                                 NavigationBarItem(
                                     selected = selectedTab == 2,
                                     onClick = { selectedTab = 2 },
+                                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                                    label = { Text("Settings") },
+                                    colors = navColors,
+                                )
+                                NavigationBarItem(
+                                    selected = selectedTab == 3,
+                                    onClick = { selectedTab = 3 },
                                     icon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Help") },
                                     label = { Text("Help") },
                                     colors = navColors,
@@ -112,7 +120,11 @@ class MainActivity : ComponentActivity() {
                                     },
                                     modifier = Modifier.fillMaxSize(),
                                 )
-                                1 -> PicoSettingsScreen(
+                                1 -> ChartScreen(
+                                    picoBaseUrl = picoBaseUrl,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                2 -> PicoSettingsScreen(
                                     picoBaseUrl = picoBaseUrl,
                                     onPicoBaseUrlChange = {
                                         picoBaseUrl = it

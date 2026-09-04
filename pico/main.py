@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.22"
+FIRMWARE_VERSION = "0.6.24"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -153,6 +153,8 @@ _ota_btn = None
 _ota_down_ms = None
 _ota_banner_done = False
 _ota_scroll_pending = False
+_identify_led = None
+_identify_until = 0
 sleep_cfg = {
     "sleep_enabled": False,
     "sleep_at_hour": 22,
@@ -841,11 +843,51 @@ def characteristic_on(lh, now_ms):
     return False
 
 
+def start_identify(led_i, ms=8000):
+    global _identify_led, _identify_until
+    led_i = int(led_i)
+    hold = _clamp(int(ms), 500, 30000)
+    _identify_led = led_i
+    _identify_until = time.ticks_add(time.ticks_ms(), hold)
+    paint_identify(led_i)
+    return hold
+
+
+def clear_identify():
+    global _identify_led, _identify_until
+    _identify_led = None
+    _identify_until = 0
+
+
+def paint_identify(led_i):
+    if strip is None:
+        return
+    for i in range(NUM_LEDS):
+        strip[i] = (0, 0, 0)
+    if 0 <= led_i < NUM_LEDS:
+        lh = None
+        for item in lighthouses:
+            if int(item.get("led", -1)) == led_i:
+                lh = item
+                break
+        color = light_color(lh) if lh else (255, 180, 60)
+        strip[led_i] = scale_color(color)
+    strip.write()
+
+
 def render_frame():
+    global _identify_led
+    now_ms = time.ticks_ms()
+    if _identify_led is not None:
+        if time.ticks_diff(_identify_until, now_ms) <= 0:
+            _identify_led = None
+        else:
+            _ldr_refresh()
+            paint_identify(_identify_led)
+            return
     if in_sleep_window():
         paint_all((0, 0, 0))
         return
-    now_ms = time.ticks_ms()
     _ldr_refresh()
     used = {}
     for lh in lighthouses:
@@ -893,6 +935,28 @@ def start_http():
     ip = status.get("ip")
     if ip:
         print("Open http://%s/  or  http://%s:8080/" % (ip, ip))
+
+
+def stop_http():
+    global http_sock, http_sock_8080
+    for s in (http_sock, http_sock_8080):
+        if s is None:
+            continue
+        try:
+            s.close()
+        except Exception:
+            pass
+    http_sock = None
+    http_sock_8080 = None
+
+
+def restart_http():
+    stop_http()
+    time.sleep_ms(40)
+    try:
+        start_http()
+    except Exception as e:
+        print("HTTP restart:", e)
 
 
 def lighthouse_payload():
@@ -1094,6 +1158,26 @@ def _request_path(line):
     return parts[1].split("?", 1)[0]
 
 
+def _request_query(line):
+    parts = line.split()
+    if len(parts) < 2 or "?" not in parts[1]:
+        return ""
+    return parts[1].split("?", 1)[1]
+
+
+def _query_int(query, key, default=None):
+    for pair in (query or "").split("&"):
+        if "=" not in pair:
+            continue
+        k, v = pair.split("=", 1)
+        if k == key:
+            try:
+                return int(v)
+            except Exception:
+                return default
+    return default
+
+
 def handle_http():
     for sock in (http_sock, http_sock_8080):
         if sock is None:
@@ -1111,6 +1195,7 @@ def _handle_conn(conn):
         header, req_body = read_http(conn)
         line = header.split("\r\n", 1)[0] if header else ""
         path = _request_path(line)
+        query = _request_query(line)
         method = line.split(" ", 1)[0] if line else "GET"
         if method == "OPTIONS":
             import wifi_manager
@@ -1129,6 +1214,28 @@ def _handle_conn(conn):
         elif method == "GET" and path == "/lighthouses-defaults":
             import wifi_manager
             wifi_manager.send_json_file(conn, "lighthouses_defaults.json", {"ok": False, "lighthouses": []})
+        elif path == "/identify":
+            led = None
+            hold = 8000
+            try:
+                if req_body and req_body.lstrip()[:1] == "{":
+                    payload = json.loads(req_body)
+                    if "led" in payload:
+                        led = int(payload.get("led"))
+                    hold = int(payload.get("ms", hold))
+            except Exception:
+                pass
+            if led is None:
+                led = _query_int(query, "led")
+            qms = _query_int(query, "ms")
+            if qms is not None:
+                hold = qms
+            if led is None or int(led) < 0:
+                clear_identify()
+                _http_send(conn, "application/json", json.dumps({"ok": True, "identifying": False}))
+            else:
+                ms = start_identify(int(led), hold)
+                _http_send(conn, "application/json", json.dumps({"ok": True, "identifying": True, "led": int(led), "ms": ms}))
         elif method == "GET" and path == "/lighthouses":
             _http_send(conn, "application/json", json.dumps({"ok": True, "lighthouses": lighthouse_payload()}))
         elif method == "POST" and path == "/lighthouses":
@@ -1563,12 +1670,14 @@ def main():
     init_matrix()
     startup_chase()
     paint_all((40, 30, 0))
+    start_http()
     sync_ntp()
     fetch_metars()
+    restart_http()
     init_ota_button()
     gc.collect()
-    start_http()
     check_for_ota()
+    restart_http()
     print("Running")
     last_fetch = time.time()
     while True:
@@ -1579,8 +1688,10 @@ def main():
             if now - last_fetch >= CYCLE_DELAY:
                 if not in_sleep_window():
                     fetch_metars()
+                    restart_http()
                     if not update_available:
                         check_for_ota()
+                        restart_http()
                 last_fetch = now
                 gc.collect()
             render_frame()

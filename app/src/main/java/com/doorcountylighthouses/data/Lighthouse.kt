@@ -18,7 +18,10 @@ data class Lighthouse(
     val periodS: Double = 1.0,
     val onS: List<Double> = listOf(1.0),
     val offS: List<Double> = listOf(0.0),
-)
+) {
+    val hasCoordinates: Boolean
+        get() = lat != 0.0 || lon != 0.0
+}
 
 data class LightPreset(
     val char: String,

@@ -1,15 +1,14 @@
 package com.doorcountylighthouses.pico
 
+import android.content.Context
 import com.doorcountylighthouses.data.Lighthouse
 import com.doorcountylighthouses.data.LighthouseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URL
 
-class PicoLighthousesApi {
+class PicoLighthousesApi(private val context: Context) {
     sealed class FetchResult {
         data class Success(val lights: List<Lighthouse>) : FetchResult()
         data class Error(val message: String) : FetchResult()
@@ -22,7 +21,7 @@ class PicoLighthousesApi {
 
     suspend fun fetch(baseUrl: String): FetchResult = withContext(Dispatchers.IO) {
         var last = "Fetch failed"
-        for (url in lighthouseUrls(baseUrl)) {
+        for (url in PicoUrls.forPath(baseUrl, "lighthouses")) {
             when (val result = getOnce(url)) {
                 is FetchResult.Success -> return@withContext result
                 is FetchResult.Error -> last = result.message
@@ -34,7 +33,7 @@ class PicoLighthousesApi {
     suspend fun save(baseUrl: String, lights: List<Lighthouse>): SaveResult = withContext(Dispatchers.IO) {
         val body = LighthouseRepository.toJson(lights)
         var last = "Save failed"
-        for (url in lighthouseUrls(baseUrl)) {
+        for (url in PicoUrls.forPath(baseUrl, "lighthouses")) {
             when (val result = postOnce(url, body)) {
                 SaveResult.Success -> return@withContext result
                 is SaveResult.Error -> last = result.message
@@ -43,30 +42,61 @@ class PicoLighthousesApi {
         SaveResult.Error(last)
     }
 
-    private fun lighthouseUrls(rawBase: String): List<String> {
-        val t = rawBase.trim().trimEnd('/')
-        val withScheme = when {
-            t.startsWith("http://", ignoreCase = true) || t.startsWith("https://", ignoreCase = true) -> t
-            else -> "http://$t"
+    sealed class IdentifyResult {
+        data class Success(val led: Int, val ms: Int) : IdentifyResult()
+        data class Error(val message: String) : IdentifyResult()
+    }
+
+    suspend fun identify(baseUrl: String, led: Int, ms: Int = 8000): IdentifyResult =
+        withContext(Dispatchers.IO) {
+            val body = JSONObject().put("led", led).put("ms", ms).toString()
+            var last = "Identify failed"
+            for (url in PicoUrls.forPath(baseUrl, "identify")) {
+                when (val result = postIdentifyOnce(url, body)) {
+                    is IdentifyResult.Success -> return@withContext result
+                    is IdentifyResult.Error -> last = result.message
+                }
+            }
+            IdentifyResult.Error(last)
         }
-        val origin = try {
-            val u = URI(withScheme)
-            val host = u.host ?: return listOf("$withScheme/lighthouses")
-            val portPart = if (u.port > 0) ":${u.port}" else ""
-            "${u.scheme}://$host$portPart"
-        } catch (_: Exception) {
-            withScheme
-        }.trimEnd('/')
-        return listOf("$origin/lighthouses")
+
+    private fun postIdentifyOnce(url: String, body: String): IdentifyResult {
+        var conn: HttpURLConnection? = null
+        return try {
+            val bytes = body.toByteArray(Charsets.UTF_8)
+            conn = PicoUrls.openConnection(context, url, 12000, 12000).apply {
+                requestMethod = "POST"
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                setRequestProperty("Content-Length", bytes.size.toString())
+            }
+            conn.outputStream.use { it.write(bytes) }
+            val code = conn.responseCode
+            val text = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                ?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) {
+                return IdentifyResult.Error("HTTP $code")
+            }
+            val root = runCatching { JSONObject(text) }.getOrNull()
+            if (root != null && root.optBoolean("ok", true) && root.optBoolean("identifying", true)) {
+                IdentifyResult.Success(root.optInt("led"), root.optInt("ms", 8000))
+            } else if (text.contains("see") && text.contains("/status")) {
+                IdentifyResult.Error("Chart firmware needs 0.6.23+ for identify. Copy main.py or install the update.")
+            } else {
+                IdentifyResult.Error(root?.optString("message").orEmpty().ifBlank { "Identify failed" })
+            }
+        } catch (e: Exception) {
+            IdentifyResult.Error(PicoUrls.netError(e))
+        } finally {
+            conn?.disconnect()
+        }
     }
 
     private fun getOnce(url: String): FetchResult {
         var conn: HttpURLConnection? = null
         return try {
-            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            conn = PicoUrls.openConnection(context, url, 15000, 15000).apply {
                 requestMethod = "GET"
-                connectTimeout = 8000
-                readTimeout = 8000
             }
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
@@ -87,7 +117,7 @@ class PicoLighthousesApi {
             }
             FetchResult.Success(lights)
         } catch (e: Exception) {
-            FetchResult.Error(e.message ?: e.toString())
+            FetchResult.Error(PicoUrls.netError(e))
         } finally {
             conn?.disconnect()
         }
@@ -97,11 +127,9 @@ class PicoLighthousesApi {
         var conn: HttpURLConnection? = null
         return try {
             val bytes = body.toByteArray(Charsets.UTF_8)
-            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            conn = PicoUrls.openConnection(context, url, 15000, 15000).apply {
                 requestMethod = "POST"
                 doOutput = true
-                connectTimeout = 10000
-                readTimeout = 10000
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 setRequestProperty("Content-Length", bytes.size.toString())
             }
@@ -116,7 +144,7 @@ class PicoLighthousesApi {
                 SaveResult.Error("HTTP $code")
             }
         } catch (e: Exception) {
-            SaveResult.Error(e.message ?: e.toString())
+            SaveResult.Error(PicoUrls.netError(e))
         } finally {
             conn?.disconnect()
         }

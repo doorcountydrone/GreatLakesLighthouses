@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -12,10 +14,13 @@ android {
         applicationId = "com.doorcountylighthouses"
         minSdk = 30
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        val mapsApiKey = loadMapsApiKey()
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        buildConfigField("boolean", "HAS_MAPS_KEY", if (mapsApiKey.isNotEmpty()) "true" else "false")
     }
 
     buildTypes {
@@ -36,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -50,6 +56,21 @@ configurations.configureEach {
     }
 }
 
+fun loadMapsApiKey(): String {
+    val files = listOf(
+        rootProject.file("secrets.properties"),
+        rootProject.file("local.properties"),
+    )
+    for (file in files) {
+        if (!file.exists()) continue
+        val props = Properties()
+        file.inputStream().use { props.load(it) }
+        val key = props.getProperty("MAPS_API_KEY")?.trim().orEmpty()
+        if (key.isNotEmpty()) return key
+    }
+    return ""
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -61,6 +82,8 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

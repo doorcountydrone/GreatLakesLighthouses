@@ -124,6 +124,13 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         )
 
         HelpCard(
+            title = "Chart tab",
+            body = "Chart shows only the lights on your current list, not the whole catalog. Lighthouse symbols are cream (white lights), red, or green. A faded symbol is skipped. The number under each one is the LED on the strip.\n\n" +
+                "Tap a lighthouse to identify it: the Pico lights only that LED for a few seconds so you can see the wiring order. Your phone must be on the same Wi-Fi as the chart, and the Pico address on the Lights tab must be current.\n\n" +
+                "Fetch from Pico on the Lights tab first so the map matches the strip. Custom lights without coordinates do not appear.",
+        )
+
+        HelpCard(
             title = "Finished chart vs building your own",
             body = "A finished Door County chart already has the lights programmed. You do not need to add or remove any.\n\n" +
                 "Adding, skipping, or reordering is for a custom chart. Put lights in the same order as the strip on the board. No programming — just the app or the browser page.",
@@ -163,7 +170,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         HelpCard(
             title = "Using a browser instead of the app",
             body = "On GreatLakes-Setup, open http://192.168.4.1 in any browser. After the chart is on home Wi-Fi, open http:// then the chart’s home-network address.\n\n" +
-                "The app has three tabs at the bottom: Lights, Settings, and Help. In a browser you will see Lighthouses, Pico settings, and Help. Same jobs: light list, Wi-Fi/brightness/sleep, and these instructions.",
+                "The app has four tabs at the bottom: Lights, Chart, Settings, and Help. In a browser you will see Lighthouses, Pico settings, and Help. Same jobs: light list, Wi-Fi/brightness/sleep, and these instructions. The Chart tab is app-only.",
         )
 
         Text(
