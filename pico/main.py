@@ -28,7 +28,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.29"
+FIRMWARE_VERSION = "0.6.35"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -49,11 +49,15 @@ OLED_GND_PIN = 19
 # Yellow band is y=0–15. sans18 is ~18px, so "g" sits one row into blue at y=0.
 OLED_TITLE_Y = -1
 MATRIX_IDLE_MS = 15000
+TOUR_NORMAL_MS = 180000
+TOUR_DARK_MS = 2000
+TOUR_STEP_MS = 10000
 MATRIX_IDLE_COLOR = (40, 200, 210)
 MATRIX_SCROLL_SPEED = 7
 BRIGHTNESS_CAP = 30
 DISPLAY_TYPE = "NONE"
 MATRIX_SCROLL = "WEATHER"
+LIGHT_SHOW = "TOUR"
 
 # Navigation-light colors (not METAR categories).
 LIGHT_RGB = {
@@ -155,6 +159,9 @@ _ota_banner_done = False
 _ota_scroll_pending = False
 _identify_led = None
 _identify_until = 0
+_tour_phase = "normal"
+_tour_until = 0
+_tour_step = 0
 sleep_cfg = {
     "sleep_enabled": False,
     "sleep_at_hour": 22,
@@ -192,7 +199,7 @@ def _clamp(n, lo, hi):
 
 
 def load_config():
-    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg, DISPLAY_TYPE, MATRIX_SCROLL, MATRIX_SCROLL_SPEED, _ldr_filt, _ldr_out, _ldr_last_ms, _adc_lo, _adc_hi
+    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg, DISPLAY_TYPE, MATRIX_SCROLL, MATRIX_SCROLL_SPEED, LIGHT_SHOW, TOUR_NORMAL_MS, TOUR_STEP_MS, _tour_phase, _tour_until, _tour_step, _ldr_filt, _ldr_out, _ldr_last_ms, _adc_lo, _adc_hi
     old_min = MIN_BRIGHTNESS
     old_max = MAX_BRIGHTNESS
     try:
@@ -210,6 +217,38 @@ def load_config():
         MATRIX_SCROLL_SPEED = _clamp(int(cfg.get("matrix_scroll_speed", 7)), 1, 10)
     except Exception:
         MATRIX_SCROLL_SPEED = 7
+    old_show = LIGHT_SHOW
+    old_flash = TOUR_NORMAL_MS
+    old_step = TOUR_STEP_MS
+    show = str(cfg.get("light_show", "TOUR")).strip().upper()
+    LIGHT_SHOW = show if show in ("FLASH", "TOUR") else "TOUR"
+    try:
+        TOUR_NORMAL_MS = _clamp(int(cfg.get("tour_flash_s", 180)), 10, 1800) * 1000
+    except Exception:
+        TOUR_NORMAL_MS = 180000
+    try:
+        TOUR_STEP_MS = _clamp(int(cfg.get("tour_step_s", 10)), 2, 120) * 1000
+    except Exception:
+        TOUR_STEP_MS = 10000
+    if LIGHT_SHOW != "TOUR":
+        _tour_phase = "normal"
+        _tour_step = 0
+        _tour_until = 0
+    elif (
+        old_show != LIGHT_SHOW
+        or old_flash != TOUR_NORMAL_MS
+        or old_step != TOUR_STEP_MS
+    ):
+        now = time.ticks_ms()
+        if _tour_phase == "populate":
+            _tour_until = time.ticks_add(now, TOUR_STEP_MS)
+        elif _tour_phase == "dark":
+            _tour_until = time.ticks_add(now, TOUR_DARK_MS)
+        else:
+            _tour_phase = "normal"
+            _tour_step = 0
+            _tour_until = time.ticks_add(now, TOUR_NORMAL_MS)
+        _tour_refresh_screens()
     BRIGHTNESS = max(0.02, min(1.0, float(cfg.get("brightness", 0.18))))
     if "max_brightness" in cfg:
         MAX_BRIGHTNESS = _clamp(int(cfg.get("max_brightness", 18)), 1, BRIGHTNESS_CAP)
@@ -224,7 +263,7 @@ def load_config():
     for k in sleep_cfg:
         if k in cfg:
             sleep_cfg[k] = cfg[k]
-    print("Display", DISPLAY_TYPE, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED, "bright", MIN_BRIGHTNESS, "-", MAX_BRIGHTNESS)
+    print("Display", DISPLAY_TYPE, "show", LIGHT_SHOW, "flash", TOUR_NORMAL_MS, "step", TOUR_STEP_MS, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED, "bright", MIN_BRIGHTNESS, "-", MAX_BRIGHTNESS)
     if old_min != MIN_BRIGHTNESS or old_max != MAX_BRIGHTNESS:
         _ldr_filt = None
         _ldr_out = None
@@ -875,9 +914,122 @@ def paint_identify(led_i):
     strip.write()
 
 
+def _tour_lights():
+    items = []
+    for lh in lighthouses:
+        if lh.get("skip"):
+            continue
+        try:
+            led_i = int(lh.get("led", -1))
+        except Exception:
+            continue
+        if 0 <= led_i < NUM_LEDS:
+            items.append(lh)
+    return items
+
+
+def _tour_label(lh):
+    return str(lh.get("short_name") or lh.get("name") or "").strip()
+
+
+def _light_wx_segments(lh):
+    name = _tour_label(lh)
+    if not name:
+        return []
+    info = station_for(lh) or {}
+    cat = str(info.get("category") or "").strip().upper()
+    color = CATEGORY_COLOR.get(cat) or CATEGORY_COLOR[""]
+    segs = [(name, color)]
+    for code in wx_codes(info.get("raw") or ""):
+        segs.append((WX_LABEL.get(code, code), WX_COLOR.get(code) or (255, 255, 255)))
+    return segs
+
+
+def _tour_refresh_screens():
+    global _matrix_need_text, _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x
+    _matrix_need_text = True
+    _oled_msgs = []
+    _oled_msg_i = 0
+    _oled_x = 128
+    _oled_title_x = 0
+
+
+def tour_tick():
+    global _tour_phase, _tour_until, _tour_step
+    now = time.ticks_ms()
+    if LIGHT_SHOW != "TOUR":
+        if _tour_phase != "normal":
+            _tour_phase = "normal"
+            _tour_step = 0
+            _tour_until = 0
+            _tour_refresh_screens()
+        return
+    if _identify_led is not None or in_sleep_window():
+        return
+    if not _tour_until:
+        _tour_phase = "normal"
+        _tour_until = time.ticks_add(now, TOUR_NORMAL_MS)
+        return
+    if time.ticks_diff(_tour_until, now) > 0:
+        return
+    items = _tour_lights()
+    if _tour_phase == "normal":
+        _tour_phase = "dark"
+        _tour_step = 0
+        _tour_until = time.ticks_add(now, TOUR_DARK_MS)
+        _tour_refresh_screens()
+    elif _tour_phase == "dark":
+        if not items:
+            _tour_phase = "normal"
+            _tour_until = time.ticks_add(now, TOUR_NORMAL_MS)
+        else:
+            _tour_phase = "populate"
+            _tour_step = 0
+            _tour_until = time.ticks_add(now, TOUR_STEP_MS)
+            _tour_refresh_screens()
+    else:
+        _tour_step += 1
+        if _tour_step >= len(items):
+            _tour_phase = "normal"
+            _tour_step = 0
+            _tour_until = time.ticks_add(now, TOUR_NORMAL_MS)
+        else:
+            _tour_until = time.ticks_add(now, TOUR_STEP_MS)
+        _tour_refresh_screens()
+
+
+def _revealed_leds():
+    if LIGHT_SHOW != "TOUR":
+        return None
+    if _tour_phase == "dark":
+        return set()
+    items = _tour_lights()
+    if _tour_phase == "populate":
+        step = _tour_step
+        if step < 0:
+            step = 0
+        return {int(lh.get("led")) for lh in items[: step + 1]}
+    return None
+
+
+def _tour_current():
+    if _tour_phase != "populate":
+        return None
+    items = _tour_lights()
+    if not items:
+        return None
+    step = _tour_step
+    if step < 0:
+        step = 0
+    if step >= len(items):
+        step = len(items) - 1
+    return items[step]
+
+
 def render_frame():
     global _identify_led
     now_ms = time.ticks_ms()
+    tour_tick()
     if _identify_led is not None:
         if time.ticks_diff(_identify_until, now_ms) <= 0:
             _identify_led = None
@@ -889,12 +1041,13 @@ def render_frame():
         paint_all((0, 0, 0))
         return
     _ldr_refresh()
+    revealed = _revealed_leds()
     used = {}
     for lh in lighthouses:
         led_i = int(lh.get("led", 0))
         if led_i < 0 or led_i >= NUM_LEDS:
             continue
-        if lh.get("skip"):
+        if lh.get("skip") or (revealed is not None and led_i not in revealed):
             strip[led_i] = (0, 0, 0)
             used[led_i] = True
             continue
@@ -1072,7 +1225,7 @@ def _ota_scroll_text():
 
 
 def _announce_ota():
-    global _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_need_text, _ota_scroll_pending
+    global _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_blank_until, _matrix_need_text, _ota_scroll_pending
     if _ota_banner_done:
         return
     _ota_scroll_pending = True
@@ -1080,6 +1233,7 @@ def _announce_ota():
     _oled_msgs = [("UPDATE", _ota_scroll_text())]
     _oled_msg_i = 0
     _oled_x = 128
+    _oled_title_x = 0
     _matrix_need_text = True
     try:
         paint_all((255, 140, 0))
@@ -1351,6 +1505,7 @@ _oled_last_ms = 0
 _oled_msgs = []
 _oled_msg_i = 0
 _oled_x = 128
+_oled_title_x = 0
 _oled_blank_until = 0
 _matrix_need_text = True
 _matrix_ip_done = False
@@ -1377,21 +1532,15 @@ def _matrix_light_segments():
     for lh in lighthouses:
         if lh.get("skip"):
             continue
-        name = str(lh.get("short_name") or lh.get("name") or "").strip()
-        if not name:
+        parts = _light_wx_segments(lh)
+        if not parts:
             continue
-        info = station_for(lh) or {}
-        codes = wx_codes(info.get("raw") or "")
-        if weather_only and not codes:
+        if weather_only and len(parts) < 2:
             continue
         if not first:
             segs.append(("-", (255, 180, 48)))
         first = False
-        cat = str(info.get("category") or "").strip().upper()
-        color = CATEGORY_COLOR.get(cat) or CATEGORY_COLOR[""]
-        segs.append((name, color))
-        for code in codes:
-            segs.append((WX_LABEL.get(code, code), WX_COLOR.get(code) or (255, 255, 255)))
+        segs.extend(parts)
     return segs
 
 
@@ -1409,14 +1558,18 @@ def refresh_matrix():
         return
     now = time.ticks_ms()
     segs = []
+    current = _tour_current()
     if _ota_scroll_pending:
         segs.append((_ota_scroll_text(), (255, 140, 0)))
+    elif current is not None:
+        segs.extend(_light_wx_segments(current))
     else:
         if not _matrix_ip_done:
             ip = status.get("ip")
             if ip:
                 segs.append((str(ip), (255, 180, 48)))
-        segs.extend(_matrix_light_segments())
+        if _tour_phase != "dark":
+            segs.extend(_matrix_light_segments())
     idle = not segs
     if idle:
         if _matrix_idle_until and time.ticks_diff(now, _matrix_idle_until) < 0:
@@ -1557,7 +1710,27 @@ def _oled_print_centered(y, text):
     _oled_print_at(x, y, text)
 
 
+def _oled_draw_title(title):
+    global _oled_title_x
+    title = str(title)
+    tw = _oled_str_w(title)
+    if tw <= 128:
+        _oled_print_centered(OLED_TITLE_Y, title)
+        return
+    _oled_print_at(_oled_title_x, OLED_TITLE_Y, title)
+    _oled_title_x -= max(2, MATRIX_SCROLL_SPEED)
+    if _oled_title_x + tw < 0:
+        _oled_title_x = 128
+
+
 def _oled_messages():
+    current = _tour_current()
+    if current is not None:
+        parts = [text for text, _color in _light_wx_segments(current)]
+        if parts:
+            return [("Lighthouses", "  ".join(parts))]
+    if _tour_phase == "dark":
+        return [("Lighthouses", "")]
     msgs = []
     if not _matrix_ip_done:
         ip = status.get("ip")
@@ -1579,7 +1752,7 @@ def _oled_messages():
 
 
 def refresh_oled():
-    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_blank_until, _matrix_ip_done, _ota_banner_done, _ota_scroll_pending
+    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_blank_until, _matrix_ip_done, _ota_banner_done, _ota_scroll_pending
     if oled is None:
         return
     now = time.ticks_ms()
@@ -1608,17 +1781,21 @@ def refresh_oled():
             _oled_msgs = _oled_messages()
             _oled_msg_i = 0
             _oled_x = 128
+            _oled_title_x = 0
         title, msg = _oled_msgs[_oled_msg_i]
         tw = _oled_str_w(msg)
         oled.fill(0)
-        _oled_print_centered(OLED_TITLE_Y, title)
+        _oled_draw_title(title)
         if _oled_x < 128 and _oled_x + tw > 0:
             _oled_print_at(_oled_x, 32, msg)
         oled.show()
         _oled_x -= max(2, MATRIX_SCROLL_SPEED)
         if _oled_x + tw < 0:
             oled.fill(0)
-            _oled_print_centered(OLED_TITLE_Y, title)
+            if _oled_str_w(title) <= 128:
+                _oled_print_centered(OLED_TITLE_Y, title)
+            else:
+                _oled_print_at(0, OLED_TITLE_Y, title)
             oled.show()
             if title == "UPDATE":
                 pause = 400
@@ -1631,6 +1808,7 @@ def refresh_oled():
             _oled_blank_until = time.ticks_add(now, pause)
             _oled_msg_i += 1
             _oled_x = 128
+            _oled_title_x = 0
             if _oled_msg_i >= len(_oled_msgs):
                 _oled_msgs = []
                 _matrix_ip_done = True
@@ -1679,6 +1857,10 @@ def main():
     check_for_ota()
     restart_http()
     print("Running")
+    global _tour_phase, _tour_until, _tour_step
+    _tour_phase = "normal"
+    _tour_step = 0
+    _tour_until = time.ticks_add(time.ticks_ms(), TOUR_NORMAL_MS)
     last_fetch = time.time()
     while True:
         try:

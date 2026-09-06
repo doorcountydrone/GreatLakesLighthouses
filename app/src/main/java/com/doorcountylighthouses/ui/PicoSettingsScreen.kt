@@ -61,11 +61,18 @@ import com.doorcountylighthouses.data.CYCLE_DELAY_MIN
 import com.doorcountylighthouses.data.DISPLAY_CHOICES
 import com.doorcountylighthouses.data.GPIO_CHOICES
 import com.doorcountylighthouses.data.ISO_WEEKDAY_NAMES
+import com.doorcountylighthouses.data.LIGHT_SHOW_CHOICES
 import com.doorcountylighthouses.data.MATRIX_SCROLL_CHOICES
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_DEFAULT
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MAX
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MIN
 import com.doorcountylighthouses.data.PicoConfig
+import com.doorcountylighthouses.data.TOUR_FLASH_S_DEFAULT
+import com.doorcountylighthouses.data.TOUR_FLASH_S_MAX
+import com.doorcountylighthouses.data.TOUR_FLASH_S_MIN
+import com.doorcountylighthouses.data.TOUR_STEP_S_DEFAULT
+import com.doorcountylighthouses.data.TOUR_STEP_S_MAX
+import com.doorcountylighthouses.data.TOUR_STEP_S_MIN
 import com.doorcountylighthouses.pico.PicoConfigApi
 import com.doorcountylighthouses.pico.PicoDiscovery
 import com.doorcountylighthouses.pico.PicoUrls
@@ -90,6 +97,10 @@ fun PicoSettingsScreen(
     var pinMenuExpanded by remember { mutableStateOf(false) }
     var displayType by remember { mutableStateOf("NONE") }
     var displayMenuExpanded by remember { mutableStateOf(false) }
+    var lightShow by remember { mutableStateOf("TOUR") }
+    var lightShowMenuExpanded by remember { mutableStateOf(false) }
+    var tourFlashS by remember { mutableStateOf(TOUR_FLASH_S_DEFAULT.toString()) }
+    var tourStepS by remember { mutableStateOf(TOUR_STEP_S_DEFAULT.toString()) }
     var matrixScroll by remember { mutableStateOf("WEATHER") }
     var matrixScrollMenuExpanded by remember { mutableStateOf(false) }
     var matrixScrollSpeed by remember { mutableFloatStateOf(MATRIX_SCROLL_SPEED_DEFAULT.toFloat()) }
@@ -127,6 +138,9 @@ fun PicoSettingsScreen(
         password = ""
         ledPin = cfg.ledPin
         displayType = cfg.displayType
+        lightShow = cfg.lightShow
+        tourFlashS = cfg.tourFlashS.coerceIn(TOUR_FLASH_S_MIN, TOUR_FLASH_S_MAX).toString()
+        tourStepS = cfg.tourStepS.coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX).toString()
         matrixScroll = cfg.matrixScroll
         matrixScrollSpeed = cfg.matrixScrollSpeed.toFloat().coerceIn(
             MATRIX_SCROLL_SPEED_MIN.toFloat(),
@@ -159,6 +173,9 @@ fun PicoSettingsScreen(
         password = password,
         ledPin = ledPin,
         displayType = displayType,
+        lightShow = lightShow,
+        tourFlashS = tourFlashS.toIntOrNull()?.coerceIn(TOUR_FLASH_S_MIN, TOUR_FLASH_S_MAX) ?: TOUR_FLASH_S_DEFAULT,
+        tourStepS = tourStepS.toIntOrNull()?.coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX) ?: TOUR_STEP_S_DEFAULT,
         matrixScroll = matrixScroll,
         matrixScrollSpeed = matrixScrollSpeed.toInt().coerceIn(MATRIX_SCROLL_SPEED_MIN, MATRIX_SCROLL_SPEED_MAX),
         brightness = maxBrightness / 255f,
@@ -356,6 +373,11 @@ fun PicoSettingsScreen(
         SettingsSection(
             title = "Brightness",
             summary = buildString {
+                append(LIGHT_SHOW_CHOICES.firstOrNull { it.id == lightShow }?.label ?: "Populate one by one")
+                if (lightShow == "TOUR") {
+                    append(" · flash ${tourFlashS.ifBlank { TOUR_FLASH_S_DEFAULT.toString() }}s · each ${tourStepS.ifBlank { TOUR_STEP_S_DEFAULT.toString() }}s")
+                }
+                append(" · ")
                 append(DISPLAY_CHOICES.firstOrNull { it.id == displayType }?.label ?: "LED strip only")
                 if (displayType == "LED_MATRIX") {
                     append(" · ")
@@ -367,6 +389,68 @@ fun PicoSettingsScreen(
             expanded = brightnessOpen,
             onToggle = { brightnessOpen = !brightnessOpen },
         ) {
+            ExposedDropdownMenuBox(
+                expanded = lightShowMenuExpanded,
+                onExpandedChange = { lightShowMenuExpanded = it },
+            ) {
+                OutlinedTextField(
+                    value = LIGHT_SHOW_CHOICES.firstOrNull { it.id == lightShow }?.label ?: "Populate one by one",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Light show") },
+                    supportingText = { Text("Keep flashing leaves every light on. One by one goes dark, then lights each lighthouse in list order with the name on OLED or matrix.") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(lightShowMenuExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    enabled = !isLoading,
+                    colors = settingsFieldColors(),
+                )
+                ExposedDropdownMenu(
+                    expanded = lightShowMenuExpanded,
+                    onDismissRequest = { lightShowMenuExpanded = false },
+                ) {
+                    LIGHT_SHOW_CHOICES.forEach { choice ->
+                        DropdownMenuItem(
+                            text = { Text(choice.label) },
+                            onClick = {
+                                lightShow = choice.id
+                                lightShowMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = tourFlashS,
+                onValueChange = { s ->
+                    if (s.isEmpty() || (s.all { it.isDigit() } && s.length <= 4 && (s.toIntOrNull() ?: 0) <= TOUR_FLASH_S_MAX)) {
+                        tourFlashS = s
+                    }
+                },
+                label = { Text("All lights flash (seconds, $TOUR_FLASH_S_MIN-$TOUR_FLASH_S_MAX)") },
+                supportingText = { Text("How long every light stays flashing before the one-by-one tour. 180 is 3 minutes.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = settingsFieldColors(),
+            )
+            OutlinedTextField(
+                value = tourStepS,
+                onValueChange = { s ->
+                    if (s.isEmpty() || (s.all { it.isDigit() } && s.length <= 3 && (s.toIntOrNull() ?: 0) <= TOUR_STEP_S_MAX)) {
+                        tourStepS = s
+                    }
+                },
+                label = { Text("Each light (seconds, $TOUR_STEP_S_MIN-$TOUR_STEP_S_MAX)") },
+                supportingText = { Text("How long each lighthouse stays on during populate one by one, with the name on OLED or matrix.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = settingsFieldColors(),
+            )
             ExposedDropdownMenuBox(
                 expanded = displayMenuExpanded,
                 onExpandedChange = { displayMenuExpanded = it },

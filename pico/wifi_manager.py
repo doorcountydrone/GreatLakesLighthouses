@@ -16,6 +16,9 @@ DEFAULT_NUM_LEDS = 13
 DEFAULT_DISPLAY_TYPE = "NONE"
 DEFAULT_MATRIX_SCROLL = "WEATHER"
 DEFAULT_MATRIX_SCROLL_SPEED = 7
+DEFAULT_LIGHT_SHOW = "TOUR"
+DEFAULT_TOUR_FLASH_S = 180
+DEFAULT_TOUR_STEP_S = 10
 DEFAULT_BRIGHTNESS = 0.18
 STARTUP_BRIGHTNESS = 0.2
 BRIGHTNESS_CAP = 30
@@ -52,6 +55,10 @@ DISPLAY_TYPES = (
 MATRIX_SCROLL_TYPES = (
     ("WEATHER", "Weather only"),
     ("ALL", "All lights"),
+)
+LIGHT_SHOW_TYPES = (
+    ("FLASH", "Keep flashing"),
+    ("TOUR", "Populate one by one"),
 )
 GPIO_NOTES = {
     0: " (default)",
@@ -422,6 +429,13 @@ def _as_matrix_scroll(v):
     return DEFAULT_MATRIX_SCROLL
 
 
+def _as_light_show(v):
+    s = str(v or "").strip().upper()
+    if s in ("FLASH", "TOUR"):
+        return s
+    return DEFAULT_LIGHT_SHOW
+
+
 def apply_fields(cfg, src):
     if src.get("ssid"):
         cfg["ssid"] = str(src["ssid"])
@@ -435,6 +449,8 @@ def apply_fields(cfg, src):
         cfg["display_type"] = _as_display_type(src["display_type"])
     if "matrix_scroll" in src and str(src["matrix_scroll"]) != "":
         cfg["matrix_scroll"] = _as_matrix_scroll(src["matrix_scroll"])
+    if "light_show" in src and str(src["light_show"]) != "":
+        cfg["light_show"] = _as_light_show(src["light_show"])
     if "min_brightness" in src and str(src["min_brightness"]) != "":
         cfg["min_brightness"] = _clamp(int(float(src["min_brightness"])), 0, BRIGHTNESS_CAP)
     if "max_brightness" in src and str(src["max_brightness"]) != "":
@@ -456,6 +472,8 @@ def apply_fields(cfg, src):
         ("wake_at_minute", 0, 59),
         ("timezone_offset_hours", -12, 14),
         ("cycle_delay", 30, 3600),
+        ("tour_flash_s", 10, 1800),
+        ("tour_step_s", 2, 120),
         ("matrix_scroll_speed", 1, 10),
         ("weekend_off_weekday", 0, 6),
         ("weekend_off_hour", 0, 23),
@@ -482,6 +500,15 @@ def matrix_scroll_options(selected):
     sel = _as_matrix_scroll(selected)
     parts = []
     for value, label in MATRIX_SCROLL_TYPES:
+        mark = " selected" if value == sel else ""
+        parts.append('<option value="%s"%s>%s</option>' % (value, mark, label))
+    return "".join(parts)
+
+
+def light_show_options(selected):
+    sel = _as_light_show(selected)
+    parts = []
+    for value, label in LIGHT_SHOW_TYPES:
         mark = " selected" if value == sel else ""
         parts.append('<option value="%s"%s>%s</option>' % (value, mark, label))
     return "".join(parts)
@@ -514,6 +541,9 @@ def merge_defaults(cfg):
         "display_type": DEFAULT_DISPLAY_TYPE,
         "matrix_scroll": DEFAULT_MATRIX_SCROLL,
         "matrix_scroll_speed": DEFAULT_MATRIX_SCROLL_SPEED,
+        "light_show": DEFAULT_LIGHT_SHOW,
+        "tour_flash_s": DEFAULT_TOUR_FLASH_S,
+        "tour_step_s": DEFAULT_TOUR_STEP_S,
         "brightness": DEFAULT_BRIGHTNESS,
         "min_brightness": 0,
         "max_brightness": _clamp(int(round(DEFAULT_BRIGHTNESS * 255)), 1, BRIGHTNESS_CAP),
@@ -530,10 +560,19 @@ def merge_defaults(cfg):
         out["min_brightness"] = 2
     out["display_type"] = _as_display_type(out.get("display_type", DEFAULT_DISPLAY_TYPE))
     out["matrix_scroll"] = _as_matrix_scroll(out.get("matrix_scroll", DEFAULT_MATRIX_SCROLL))
+    out["light_show"] = _as_light_show(out.get("light_show", DEFAULT_LIGHT_SHOW))
     try:
         out["matrix_scroll_speed"] = _clamp(int(out.get("matrix_scroll_speed", DEFAULT_MATRIX_SCROLL_SPEED)), 1, 10)
     except Exception:
         out["matrix_scroll_speed"] = DEFAULT_MATRIX_SCROLL_SPEED
+    try:
+        out["tour_flash_s"] = _clamp(int(out.get("tour_flash_s", DEFAULT_TOUR_FLASH_S)), 10, 1800)
+    except Exception:
+        out["tour_flash_s"] = DEFAULT_TOUR_FLASH_S
+    try:
+        out["tour_step_s"] = _clamp(int(out.get("tour_step_s", DEFAULT_TOUR_STEP_S)), 2, 120)
+    except Exception:
+        out["tour_step_s"] = DEFAULT_TOUR_STEP_S
     return out
 
 
@@ -714,6 +753,14 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <label>Password</label>
 <input name="password" type="password" value="" placeholder="Leave blank to keep the current password" autocomplete="off">
 <p class="note">SSID and password are for the Pico to join your router, not for the GreatLakes-Setup network.</p>
+<label>Light show</label>
+<select name="light_show">__SHOW_OPTS__</select>
+<p class="note">Keep flashing leaves every light on its real characteristic. One by one goes dark, then lights each lighthouse in list order with the name on OLED or matrix.</p>
+<div class="row">
+<div><label>All lights flash (seconds)</label><input name="tour_flash_s" type="number" min="10" max="1800" value="__TOUR_FLASH__"></div>
+<div><label>Each light (seconds)</label><input name="tour_step_s" type="number" min="2" max="120" value="__TOUR_STEP__"></div>
+</div>
+<p class="note">Used when Light show is Populate one by one. 180 is 3 minutes of all lights flashing. 10 is 10 seconds per light on OLED or matrix.</p>
 <label>Extra display</label>
 <select name="display_type">__DISPLAY_OPTS__</select>
 <p class="note">LED strip is always on. Add an OLED (GPIO 16-19) or an 8x32 matrix (GPIO 1), or leave strip only.</p>
@@ -972,6 +1019,9 @@ say('Loaded '+lights.length+' lights');
     page = page.replace("__NUM_LEDS__", _html_attr(cfg.get("num_leds", DEFAULT_NUM_LEDS)))
     page = page.replace("__GPIO_OPTS__", gpio_options(cfg.get("led_pin", DEFAULT_LED_PIN)))
     page = page.replace("__DISPLAY_OPTS__", display_options(cfg.get("display_type", DEFAULT_DISPLAY_TYPE)))
+    page = page.replace("__SHOW_OPTS__", light_show_options(cfg.get("light_show", DEFAULT_LIGHT_SHOW)))
+    page = page.replace("__TOUR_FLASH__", _html_attr(cfg.get("tour_flash_s", DEFAULT_TOUR_FLASH_S)))
+    page = page.replace("__TOUR_STEP__", _html_attr(cfg.get("tour_step_s", DEFAULT_TOUR_STEP_S)))
     page = page.replace("__SCROLL_OPTS__", matrix_scroll_options(cfg.get("matrix_scroll", DEFAULT_MATRIX_SCROLL)))
     page = page.replace("__SCROLL_SPD__", _html_attr(cfg.get("matrix_scroll_speed", DEFAULT_MATRIX_SCROLL_SPEED)))
     max_b = cfg.get("max_brightness")

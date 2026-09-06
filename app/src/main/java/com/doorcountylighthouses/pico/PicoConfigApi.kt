@@ -5,6 +5,12 @@ import com.doorcountylighthouses.data.BRIGHTNESS_SLIDER_MAX
 import com.doorcountylighthouses.data.CYCLE_DELAY_MAX
 import com.doorcountylighthouses.data.CYCLE_DELAY_MIN
 import com.doorcountylighthouses.data.PicoConfig
+import com.doorcountylighthouses.data.TOUR_FLASH_S_DEFAULT
+import com.doorcountylighthouses.data.TOUR_FLASH_S_MAX
+import com.doorcountylighthouses.data.TOUR_FLASH_S_MIN
+import com.doorcountylighthouses.data.TOUR_STEP_S_DEFAULT
+import com.doorcountylighthouses.data.TOUR_STEP_S_MAX
+import com.doorcountylighthouses.data.TOUR_STEP_S_MIN
 import com.doorcountylighthouses.data.loadPicoLanUrl
 import com.doorcountylighthouses.data.rememberWorkingPicoUrl
 import kotlinx.coroutines.Dispatchers
@@ -184,6 +190,9 @@ class PicoConfigApi(private val context: Context) {
         put("display_type", config.displayType)
         put("matrix_scroll", config.matrixScroll)
         put("matrix_scroll_speed", config.matrixScrollSpeed.coerceIn(1, 10))
+        put("light_show", config.lightShow)
+        put("tour_flash_s", config.tourFlashS.coerceIn(TOUR_FLASH_S_MIN, TOUR_FLASH_S_MAX))
+        put("tour_step_s", config.tourStepS.coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX))
         put("min_brightness", config.minBrightness.coerceIn(0, BRIGHTNESS_SLIDER_MAX))
         put("max_brightness", config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX))
         put("brightness", (config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX) / 255.0).coerceIn(0.02, 1.0))
@@ -215,6 +224,11 @@ class PicoConfigApi(private val context: Context) {
             if (raw in setOf("WEATHER", "ALL")) raw else "WEATHER"
         },
         matrixScrollSpeed = json.intLoose("matrix_scroll_speed", 7).coerceIn(1, 10),
+        lightShow = json.optString("light_show", "TOUR").uppercase().let { raw ->
+            if (raw in setOf("FLASH", "TOUR")) raw else "TOUR"
+        },
+        tourFlashS = json.intLoose("tour_flash_s", TOUR_FLASH_S_DEFAULT).coerceIn(TOUR_FLASH_S_MIN, TOUR_FLASH_S_MAX),
+        tourStepS = json.intLoose("tour_step_s", TOUR_STEP_S_DEFAULT).coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX),
         brightness = json.floatLoose("brightness", 0.18f).coerceIn(0.02f, 1f),
         minBrightness = json.intLoose("min_brightness", 2).coerceIn(0, BRIGHTNESS_SLIDER_MAX),
         maxBrightness = run {

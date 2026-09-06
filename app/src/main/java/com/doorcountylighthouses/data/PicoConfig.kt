@@ -6,6 +6,12 @@ const val CYCLE_DELAY_MAX = 3600
 const val MATRIX_SCROLL_SPEED_MIN = 1
 const val MATRIX_SCROLL_SPEED_MAX = 10
 const val MATRIX_SCROLL_SPEED_DEFAULT = 7
+const val TOUR_FLASH_S_MIN = 10
+const val TOUR_FLASH_S_MAX = 1800
+const val TOUR_FLASH_S_DEFAULT = 180
+const val TOUR_STEP_S_MIN = 2
+const val TOUR_STEP_S_MAX = 120
+const val TOUR_STEP_S_DEFAULT = 10
 
 data class PicoConfig(
     val ssid: String = "",
@@ -35,6 +41,9 @@ data class PicoConfig(
     val displayType: String = "NONE",
     val matrixScroll: String = "WEATHER",
     val matrixScrollSpeed: Int = MATRIX_SCROLL_SPEED_DEFAULT,
+    val lightShow: String = "TOUR",
+    val tourFlashS: Int = TOUR_FLASH_S_DEFAULT,
+    val tourStepS: Int = TOUR_STEP_S_DEFAULT,
 )
 
 data class GpioChoice(val pin: Int, val label: String)
@@ -70,4 +79,9 @@ val DISPLAY_CHOICES = listOf(
 val MATRIX_SCROLL_CHOICES = listOf(
     DisplayChoice("WEATHER", "Weather only"),
     DisplayChoice("ALL", "All lights"),
+)
+
+val LIGHT_SHOW_CHOICES = listOf(
+    DisplayChoice("FLASH", "Keep flashing"),
+    DisplayChoice("TOUR", "Populate one by one"),
 )

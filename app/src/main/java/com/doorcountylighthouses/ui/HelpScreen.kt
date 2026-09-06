@@ -62,7 +62,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             body = "1. On your phone, join the chart’s setup Wi-Fi: name GreatLakes-Setup, password door1234.\n\n" +
                 "2. Settings tab: enter your home (or hotel) Wi-Fi name and password — not the setup password — then tap Save & reboot. Wait for the chart to restart and join your network.\n\n" +
                 "3. Lights tab: the Door County lights are already there. Change the list if you want, then tap Save to Pico.\n\n" +
-                "Done. The lights blink like the real lighthouses. Use this Help tab for more detail.",
+                "Done. The lights blink like the real lighthouses. In Settings you can keep them flashing, or populate one by one (dark, then each light in order with the name on OLED or matrix). Use this Help tab for more detail.",
         )
 
         HelpCard(
@@ -149,6 +149,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             body = "• Settings is grouped into Wi-Fi, brightness, sleep, and update. Tap a card to open it. Fetch / Save stay at the top.\n\n" +
                 "• Fetch / Reload loads the chart’s current settings. The Wi-Fi password is never shown; leave Password blank to keep the one already saved.\n\n" +
                 "• Home Wi-Fi name and password are for your router, not GreatLakes-Setup.\n\n" +
+                "• Light show: Keep flashing leaves every light on its real characteristic. Populate one by one goes dark, then lights each lighthouse in list order with the name on OLED or matrix. All lights flash is how many seconds they stay flashing as a set (10 to 1800; 180 is 3 minutes). Each light is how many seconds each lighthouse stays on during the tour (2 to 120). Save after you change this — no reboot needed.\n\n" +
                 "• Extra display: LED strip only, OLED (GPIO 16–19), or LED matrix (GPIO 1). The lighthouse strip is always on. Save & reboot after you change this.\n\n" +
                 "• LED matrix scroll: Weather only (default) lists lights that currently have rain, fog, snow, lightning, or similar. If none do, GREAT LAKES LIGHTHOUSES scrolls about every 15 seconds. All lights scrolls every light. Matrix scroll speed is 1 (slow) to 10 (fast). The IP scrolls once at startup.\n\n" +
                 "• Max brightness is how bright the lights get in a bright room (1 to 30). Min brightness is the dark-room floor (0 = off, 1–2 is a faint glow).\n\n" +
