@@ -398,27 +398,51 @@ private fun CatalogPickerDialog(
     val catalog = remember { CatalogRepository.load(context) }
     var query by remember { mutableStateOf("") }
     var shore by remember { mutableStateOf<String?>(null) }
-    val chips = remember(catalog) {
+    var kind by remember { mutableStateOf<String?>(null) }
+    val kindFiltered = remember(catalog, kind) {
+        catalog.filter { CatalogRepository.matchesKind(it, kind) }
+    }
+    val kindChips = listOf(
+        CatalogRepository.KIND_ALL to "All",
+        CatalogRepository.KIND_LIGHTS to "Lighthouses",
+        CatalogRepository.KIND_MARKS to "Lights",
+        CatalogRepository.KIND_BUOYS to "Buoys",
+    )
+    val chips = remember(kindFiltered) {
         listOf(CatalogRepository.SHORE_ALL to "All") +
             CatalogRepository.REGION_ORDER
-                .filter { region -> catalog.any { it.region == region } }
+                .filter { region -> kindFiltered.any { it.region == region } }
                 .map { it to CatalogRepository.regionChipLabel(it) }
     }
-    val results = remember(query, shore, catalog) {
-        catalog.filter { entry ->
-            val shoreOk = shore == null ||
+    val results = remember(query, shore, kindFiltered) {
+        val shoreOk: (CatalogEntry) -> Boolean = { entry ->
+            shore == null ||
                 shore == CatalogRepository.SHORE_ALL ||
                 entry.region == shore
-            shoreOk && entry.matches(query)
+        }
+        if (query.isBlank()) {
+            kindFiltered.filter(shoreOk)
+        } else {
+            kindFiltered.mapNotNull { entry ->
+                if (!shoreOk(entry)) return@mapNotNull null
+                val score = entry.searchScore(query)
+                if (score > 0) entry to score else null
+            }.sortedWith(
+                compareByDescending<Pair<CatalogEntry, Int>> { it.second }
+                    .thenBy { it.first.name },
+            ).map { it.first }
         }
     }
-    val browsing = query.isNotBlank() || shore != null
+    val browsing = query.isNotBlank() || shore != null || kind != null
     val selectedShore = shore
     val supporting = when {
-        !browsing -> "Tap a shore to browse, or search"
+        !browsing -> "Lighthouses, lights, or buoys — then a shore, or search"
         selectedShore != null && selectedShore != CatalogRepository.SHORE_ALL ->
             "${results.size} on ${CatalogRepository.regionChipLabel(selectedShore)}"
-        else -> "${results.size} of ${catalog.size} · try Grand Haven, St. Joseph, Point Betsie"
+        kind == CatalogRepository.KIND_BUOYS -> "${results.size} buoys"
+        kind == CatalogRepository.KIND_MARKS -> "${results.size} lights"
+        kind == CatalogRepository.KIND_LIGHTS -> "${results.size} lighthouses"
+        else -> "${results.size} of ${catalog.size} · try st joseph, kewaunee canal, green"
     }
 
     AlertDialog(
@@ -431,11 +455,36 @@ private fun CatalogPickerDialog(
                     contentPadding = PaddingValues(bottom = 8.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    items(kindChips, key = { "k-${it.first}" }) { (id, label) ->
+                        val count = when (id) {
+                            CatalogRepository.KIND_BUOYS -> catalog.count { CatalogRepository.isBuoy(it) }
+                            CatalogRepository.KIND_MARKS -> catalog.count { CatalogRepository.isOtherLight(it) }
+                            CatalogRepository.KIND_LIGHTS -> catalog.count { CatalogRepository.isLighthouse(it) }
+                            else -> catalog.size
+                        }
+                        FilterChip(
+                            selected = kind == id,
+                            onClick = { kind = if (kind == id) null else id },
+                            label = { Text("$label  $count") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Amber,
+                                selectedLabelColor = Navy,
+                                containerColor = CardNavy,
+                                labelColor = Cream,
+                            ),
+                        )
+                    }
+                }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     items(chips, key = { it.first }) { (id, label) ->
                         val count = if (id == CatalogRepository.SHORE_ALL) {
-                            catalog.size
+                            kindFiltered.size
                         } else {
-                            catalog.count { it.region == id }
+                            kindFiltered.count { it.region == id }
                         }
                         FilterChip(
                             selected = shore == id,
@@ -461,7 +510,7 @@ private fun CatalogPickerDialog(
                 )
                 if (!browsing) {
                     Text(
-                        text = "Chicago, Wisconsin, Green Bay, Michigan, or the Straits — pick one instead of scrolling the whole lake.",
+                        text = "Lighthouses are the named towers (Canal North Pierhead counts). Lights are numbered marks, marinas, and breakwaters.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Fog,
                         modifier = Modifier.padding(top = 8.dp),

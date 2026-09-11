@@ -119,16 +119,18 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
                 "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
                 "• Drag the handle on the left to reorder. First in the list is the first light on the strip (usually the southernmost). In the browser, use Up / Down.\n\n" +
-                "• Add from catalog: browse by shore (Chicago, Wisconsin, Green Bay, Michigan, Straits) or search by name. Color, flash, and nearest weather station are already filled in. Tap one to add it.\n\n" +
+                "• Add from catalog: pick Lighthouses, Lights, or Buoys, then a shore, or search. Lighthouses are the named towers (Canal North Pierhead counts). Lights are numbered marks and marinas. A few words is enough — st joseph finds St. Joseph. Color, flash, and nearest weather station are already filled in. Tap one to add it.\n\n" +
                 "• Add custom: type a name, pick a flash pattern, and optionally a nearby weather station (for example KSUE).\n\n" +
                 "• Restore defaults: puts back Kewaunee through Rock Island. Then Save so the chart uses that list.",
         )
 
         HelpCard(
             title = "Chart tab",
-            body = "Chart shows only the lights on your current list, not the whole catalog. Lighthouse symbols are cream (white lights), red, or green. A faded symbol is skipped. The number under each one is the LED on the strip.\n\n" +
-                "Tap a lighthouse to open its card: name, characteristic, and LED number. Identify lights only that LED for a few seconds so you can see the wiring order. Same as tapping the LED number on the Lights tab. Your phone must be on the same Wi-Fi as the chart (home Wi-Fi, or GreatLakes-Setup with address 192.168.4.1). The Chart map needs internet for tiles, so on setup Wi-Fi use the Lights tab instead.\n\n" +
-                "Fetch from Pico on the Lights tab first so the map matches the strip. Custom lights without coordinates do not appear.",
+            body = "Bold lighthouse symbols are the lights on your strip. Cream is white, then red or green. A faded lighthouse is skipped. The number is the LED.\n\n" +
+                "Faint colored dots are catalog aids not on your list yet. Turn them on with Catalog. Lighthouses shows named towers — Canal North Pierhead, Cana Island, ranges. Lights shows numbered marks, marinas, and breakwaters. All shows both. None / Green / Red / Both is for buoys. Tap a dot to add it, or tap empty water for the nearest catalog aid. New lights go at the end of the list — drag on Lights to match the strip, then Save to Pico.\n\n" +
+                "Use Map for Google Maps (Satellite is there too), or NOAA for the official ENC nautical chart — depths, channels, and the real aids. Same pins on both. NOAA is not for navigation.\n\n" +
+                "Tap a strip lighthouse to Identify that LED. Your phone must be on the same Wi-Fi as the chart. The Chart map needs internet for tiles, so on setup Wi-Fi use the Lights tab instead.\n\n" +
+                "Custom lights without coordinates do not appear.",
         )
 
         HelpCard(

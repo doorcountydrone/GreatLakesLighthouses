@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
                                         savePicoBaseUrl(context, it)
                                     },
                                     lights = lights,
+                                    onLightsChange = persistLights,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 2 -> PicoSettingsScreen(

@@ -73,8 +73,20 @@ def parse_characteristic(raw: str):
         period = float(m.group(1))
         return {"char": f"Alt WR {period:g}s", "color": "W", "period_s": period, "on_s": [period / 2], "off_s": [period / 2]}
 
-    if sl.startswith("QF") or sl.startswith("Q "):
-        return {"char": "Q W", "color": "W", "period_s": 1.0, "on_s": [0.3], "off_s": [0.7]}
+    m = re.search(r"FL\s*\(\s*2\s*\+\s*1\s*\)\s*[WRG].*?(\d+(?:\.\d+)?)\s*S", sl)
+    if m:
+        period = float(m.group(1))
+        rest = max(0.5, period - 2.5)
+        return {
+            "char": f"Fl(2+1) {color} {period:g}s",
+            "color": color,
+            "period_s": period,
+            "on_s": [0.5, 0.5, 0.5],
+            "off_s": [0.5, 1.0, rest],
+        }
+
+    if sl.startswith("QF") or sl.startswith("Q ") or sl.startswith("Q"):
+        return {"char": f"Q {color}", "color": color, "period_s": 1.0, "on_s": [0.3], "off_s": [0.7]}
 
     m = re.search(r"FL\s*[WRG]\s*(\d+(?:\.\d+)?)\s*S", sl)
     if m:
@@ -150,7 +162,7 @@ def write_catalog(items):
     out = {
         "version": 2,
         "area": "Lake Michigan and adjoining waters (Green Bay, Straits approaches)",
-        "notes": "Search catalog in the app, then add lights to your LED list. Each entry includes the nearest METAR station. Not all entries are on the strip.",
+        "notes": "Search catalog in the app, then add lights to your LED list. Includes named lighthouses plus USCG green and red lights and lighted buoys on Lake Michigan and Green Bay. Each entry has the nearest METAR station. Not all entries are on the strip.",
         "count": len(items),
         "lighthouses": items,
     }

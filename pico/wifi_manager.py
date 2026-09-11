@@ -46,7 +46,7 @@ DEFAULT_SLEEP = {
     "weekend_on_minute": 0,
 }
 
-WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+WEEKDAYS = ("Mondwqay", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 DISPLAY_TYPES = (
     ("NONE", "LED strip only"),
     ("OLED", "OLED (128x64)"),
@@ -714,9 +714,9 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 .use input{width:auto;margin:0}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);padding:16px;overflow:auto;z-index:2}
 #overlay .box{background:#0B1F3A;border:1px solid #E8A838;border-radius:10px;padding:16px;max-width:520px;margin:20px auto}
-#catChips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-#catChips .chip{width:auto;margin:0;padding:6px 10px;background:#16324F;color:#F4EBD0;border-radius:999px;font-size:.8rem;font-weight:normal}
-#catChips .chip.on{background:#E8A838;color:#0B1F3A}
+#catKinds,#catChips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+#catKinds .chip,#catChips .chip{width:auto;margin:0;padding:6px 10px;background:#16324F;color:#F4EBD0;border-radius:999px;font-size:.8rem;font-weight:normal}
+#catKinds .chip.on,#catChips .chip.on{background:#E8A838;color:#0B1F3A}
 #catList{max-height:50vh;overflow:auto}
 .hit{background:#16324F;border-radius:8px;padding:8px;margin-top:6px}
 .hit.onmap{opacity:.45}
@@ -824,7 +824,7 @@ __UPDATE_BANNER__
 </div>
 <script>
 var lights=__LIGHTS_JSON__;
-var catalog=null, catShore=null, catQuery='';
+var catalog=null, catShore=null, catKind=null, catQuery='';
 var PRESETS=[
 {char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0],label:'F W - steady white'},
 {char:'F R',color:'R',period_s:1,on_s:[1],off_s:[0],label:'F R - steady red'},
@@ -936,27 +936,63 @@ function openCatalog(){
  document.getElementById('modalBox').innerHTML='<h2>Lake Michigan catalog</h2><p class="note">Loading...</p>';
  document.getElementById('overlay').style.display='block';
  var SHORES=[['Chicago','Indiana / Chicago'],['Wisconsin','Wisconsin / Illinois'],['Green Bay','Green Bay'],['Michigan','Michigan'],['Straits','Straits / North']];
+ function isBuoy(e){
+  return ((e.name||'')+' '+(e.short_name||'')).toLowerCase().indexOf('buoy')>=0;
+ }
  function paint(q){
   catQuery=q||'';
   q=catQuery.toLowerCase();
-  var hits=(catalog||[]).filter(function(e){
+  var pool=(catalog||[]).filter(function(e){
+   if(!catKind||catKind==='*') return true;
+   var b=isBuoy(e);
+   return catKind==='buoys'?b:!b;
+  });
+  function norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/^\s+|\s+$/g,'');}
+  function words(s){return norm(s).split(' ').filter(function(w){return w;});}
+  var skip={the:1,of:1,and:1,a:1,to:1,light:1,lights:1,lighthouse:1,lighthouses:1,lt:1};
+  var alias={st:'saint',saint:'st',pt:'point',point:'pt',isl:'island',island:'isl',pierhead:'pier',pier:'pierhead',ent:'entrance',entrance:'ent',joe:'joseph',joseph:'joe',harbor:'harbour',harbour:'harbor',mackinaw:'mackinac',mackinac:'mackinaw',betsey:'betsie',betsie:'betsey'};
+  function hitWord(t,hayWords,hay){
+   var vars=[t]; if(alias[t]) vars.push(alias[t]);
+   for(var i=0;i<vars.length;i++){
+    var v=vars[i];
+    if(v.length>=4&&hay.indexOf(v)>=0) return true;
+    for(var j=0;j<hayWords.length;j++){
+     var w=hayWords[j];
+     if(w===v) return true;
+     if(v.length>=2&&w.indexOf(v)===0) return true;
+    }
+   }
+   return false;
+  }
+  var hits=pool.filter(function(e){
    if(catShore&&catShore!=='*'&&(e.region||'')!==catShore) return false;
    if(!q) return true;
-   return (e.name||'').toLowerCase().indexOf(q)>=0||(e.short_name||'').toLowerCase().indexOf(q)>=0||(e.region||'').toLowerCase().indexOf(q)>=0||((e.light&&e.light.char)||'').toLowerCase().indexOf(q)>=0||(e.metar||'').toLowerCase().indexOf(q)>=0||(e.metar_name||'').toLowerCase().indexOf(q)>=0;
+   var hay=norm([e.name,e.short_name,e.region,(e.light&&e.light.char)||'',e.metar,e.metar_name].join(' '));
+   if(hay.indexOf(norm(q))>=0) return true;
+   var hw=words(hay);
+   var toks=words(q).filter(function(t){return !skip[t];});
+   if(!toks.length) toks=words(q);
+   return toks.every(function(t){return hitWord(t,hw,hay);});
   });
-  var show=q||catShore;
-  var html='<h2>Lake Michigan catalog</h2><div id="catChips">';
-  html+='<button type="button" class="chip'+(catShore==='*'?' on':'')+'" data-r="*">All '+(catalog||[]).length+'</button>';
+  var show=q||catShore||catKind;
+  var nLights=(catalog||[]).filter(function(e){return !isBuoy(e);}).length;
+  var nBuoys=(catalog||[]).filter(isBuoy).length;
+  var html='<h2>Lake Michigan catalog</h2><div id="catKinds">';
+  html+='<button type="button" class="chip'+(catKind==='*'?' on':'')+'" data-k="*">All '+(catalog||[]).length+'</button>';
+  html+='<button type="button" class="chip'+(catKind==='lights'?' on':'')+'" data-k="lights">Lighthouses '+nLights+'</button>';
+  html+='<button type="button" class="chip'+(catKind==='buoys'?' on':'')+'" data-k="buoys">Buoys '+nBuoys+'</button>';
+  html+='</div><div id="catChips">';
+  html+='<button type="button" class="chip'+(catShore==='*'?' on':'')+'" data-r="*">All '+pool.length+'</button>';
   SHORES.forEach(function(s){
-   var n=(catalog||[]).filter(function(e){return e.region===s[1];}).length;
+   var n=pool.filter(function(e){return e.region===s[1];}).length;
    if(!n) return;
    html+='<button type="button" class="chip'+(catShore===s[1]?' on':'')+'" data-r="'+s[1]+'">'+s[0]+' '+n+'</button>';
   });
   html+='</div><label>Search</label><input id="catQ" value="'+esc(catQuery)+'" placeholder="Grand Haven, St. Joseph, Point Betsie">';
   if(!show){
-   html+='<p class="note">Tap a shore to browse, or search by name.</p>';
+   html+='<p class="note">Pick Lighthouses or Buoys, then a shore — or search. Pierheads and ranges are with Lighthouses.</p>';
   }else{
-   html+='<p class="note">'+hits.length+(catShore&&catShore!=='*'?' on this shore':' of '+(catalog||[]).length)+'</p><div id="catList">';
+   html+='<p class="note">'+hits.length+(catShore&&catShore!=='*'?' on this shore':' of '+pool.length)+'</p><div id="catList">';
    hits.forEach(function(e,idx){
     var used=onMap(e);
     html+='<div class="hit'+(used?' onmap':'')+'" data-i="'+idx+'"><b>'+esc(e.name)+'</b><div class="amber">'+esc((e.light&&e.light.char)||'')+' · '+esc(e.region||'')+(e.metar?' · '+esc(e.metar):'')+'</div>';
@@ -970,6 +1006,12 @@ function openCatalog(){
   var box=document.getElementById('modalBox');
   box._hits=hits;
   document.getElementById('catQ').oninput=function(){paint(this.value);};
+  document.getElementById('catKinds').onclick=function(ev){
+   var b=ev.target.closest('.chip'); if(!b) return;
+   var k=b.getAttribute('data-k');
+   catKind=(catKind===k)?null:k;
+   paint(document.getElementById('catQ').value);
+  };
   document.getElementById('catChips').onclick=function(ev){
    var b=ev.target.closest('.chip'); if(!b) return;
    var r=b.getAttribute('data-r');
@@ -1373,3 +1415,4 @@ def start(force_ap=False):
     init_ldr()
     paint_status((40, 30, 0))
     run_server(force_ap=force_ap)
+-
