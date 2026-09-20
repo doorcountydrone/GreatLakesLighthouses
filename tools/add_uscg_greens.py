@@ -1,4 +1,4 @@
-"""Merge USCG Vol. 7 green and red lights (Lake Michigan + Green Bay) into the catalog."""
+"""Merge USCG Vol. 7 lights (Huron + Erie expansion) into the catalog."""
 import json
 import re
 import sys
@@ -8,6 +8,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_catalog import (  # noqa: E402
     APP_CATALOG,
     assign_metars,
+    in_america_box,
+    in_erie_box,
+    in_huron_box,
+    in_superior_box,
     load_stations,
     parse_characteristic,
     region,
@@ -16,13 +20,50 @@ from generate_catalog import (  # noqa: E402
 )
 
 USCG_DIR = Path(__file__).with_name("uscg_d9")
-SKIP_WATERWAYS = ("indian river", "crooked lake", "burt lake")
+SKIP_WATERWAYS = (
+    "indian river",
+    "crooked lake",
+    "burt lake",
+    "mullett lake",
+    "clinton river",
+    "saginaw river",
+    "detroit river",
+    "lake st. clair",
+    "lake st clair",
+    "st. clair river",
+    "st. clair flats",
+    "st. clair cut-off",
+    "fighting island",
+    "wyandotte",
+    "belle isle",
+    "fleming channel",
+    "selfridge",
+    "niagara river",
+    "lower niagara",
+    "st. lawrence seaway",
+    "st lawrence seaway",
+    "welland",
+    "black rock",
+    "tonawanda",
+    "maumee river",
+    "keweenaw waterway",
+    "torch lake",
+    "st. louis river upper",
+)
+KEEP_NIAGARA_LAKE = ("fort niagara", "niagara bar", "tibbetts point")
 KEEP_TYPES = ("LT", "LTMA", "LB")
-COLORS = ("G", "R")
+COLORS = ("G", "R", "W")
 
 
 def _in_box(lat, lon):
-    return 41.55 <= lat <= 46.15 and -88.25 <= lon <= -84.55
+    # Existing Lake Michigan / Green Bay list is left as-is. Add remaining
+    # US Lake Huron plus US Lake Erie (not inland rivers or Niagara).
+    return (
+        in_huron_box(lat, lon)
+        or in_erie_box(lat, lon)
+        or in_america_box(lat, lon)
+        or in_superior_box(lat, lon)
+    )
 
 
 def _color_char(raw, want):
@@ -33,6 +74,8 @@ def _color_char(raw, want):
         return bool(re.search(r"\bG\b", sl)) and "RG" not in sl
     if want == "R":
         return bool(re.search(r"\bR\b", sl)) and "WR" not in sl and "RG" not in sl
+    if want == "W":
+        return bool(re.search(r"\bW\b", sl) or "WR" in sl)
     return False
 
 
@@ -84,12 +127,17 @@ def uscg_color_items(want):
         if (pr.get("DESCRIPTION_TYPE") or "").upper() not in KEEP_TYPES:
             continue
         raw_char = (pr.get("LIGHT_CHAR") or "").strip()
-        if not _color_char(raw_char, want):
+        kind = (pr.get("DESCRIPTION_TYPE") or "").upper()
+        if not raw_char:
+            if want != "W" or kind not in ("LT", "LTMA"):
+                continue
+        elif not _color_char(raw_char, want):
             continue
         waterway = (pr.get("HWATERWAY_NAME") or "").lower()
-        if any(skip in waterway for skip in SKIP_WATERWAYS):
-            continue
         name = (pr.get("NAME") or "").strip()
+        if any(skip in waterway for skip in SKIP_WATERWAYS):
+            if not any(keep in name.lower() for keep in KEEP_NIAGARA_LAKE):
+                continue
         if not name:
             continue
         parsed = parse_characteristic(raw_char)
@@ -145,7 +193,8 @@ def main():
     for color in COLORS:
         incoming.extend(uscg_color_items(color))
     merged, added = merge(existing, incoming)
-    assign_metars(merged, load_stations())
+    new_ids = {item["id"] for item in incoming}
+    assign_metars([item for item in merged if item.get("id") in new_ids], load_stations())
     write_catalog(merged)
     greens = sum(1 for i in merged if (i.get("light") or {}).get("color") == "G")
     reds = sum(1 for i in merged if (i.get("light") or {}).get("color") == "R")

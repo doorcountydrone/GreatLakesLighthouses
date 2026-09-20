@@ -104,10 +104,10 @@ class PicoLighthousesApi(private val context: Context) {
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty().trim()
             if (text.isEmpty()) {
-                return FetchResult.Error("Empty reply from Pico (HTTP $code). Copy lighthouses.json onto the Pico if Save wiped it.")
+                return FetchResult.Error("Empty reply from the chart (HTTP $code). Copy lighthouses.json onto the chart if Save wiped it.")
             }
             if (text.startsWith("<")) {
-                return FetchResult.Error("Pico returned a web page, not the light list. Check the Pico address.")
+                return FetchResult.Error("The chart returned a web page, not the light list. Check the chart address.")
             }
             val root = JSONObject(text)
             val array = root.optJSONArray("lighthouses")

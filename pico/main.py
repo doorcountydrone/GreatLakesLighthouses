@@ -16,6 +16,11 @@ except ImportError:
     import requests as urequests
 
 try:
+    import netreq
+except ImportError:
+    netreq = None
+
+try:
     import ntptime
 except ImportError:
     ntptime = None
@@ -28,7 +33,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.36"
+FIRMWARE_VERSION = "0.6.43"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -54,6 +59,7 @@ TOUR_DARK_MS = 2000
 TOUR_STEP_MS = 10000
 MATRIX_IDLE_COLOR = (40, 200, 210)
 MATRIX_SCROLL_SPEED = 7
+SCROLL_TIMES = 1
 BRIGHTNESS_CAP = 30
 DISPLAY_TYPE = "NONE"
 MATRIX_SCROLL = "WEATHER"
@@ -77,6 +83,7 @@ CATEGORY_COLOR = {
 WX_TAGS = (
     "BR", "-RA", "RA", "+RA", "-SN", "SN", "+SN", "SHSN", "LTG", "DSNT",
     "WND", "FG", "FZFG", "FZFD", "CLR", "CC", "CA", "CG", "VCTS", "TS",
+    "-TSRA", "TSRA", "+TSRA",
     "$", "FC", "+FC", "TORNADO",
 )
 WX_SKIP_SCROLL = ("CLR", "$")
@@ -102,6 +109,9 @@ WX_COLOR = {
     "CG": (255, 255, 255),
     "VCTS": (255, 255, 255),
     "TS": (255, 0, 0),
+    "-TSRA": (255, 0, 0),
+    "TSRA": (255, 0, 0),
+    "+TSRA": (255, 0, 0),
     "FC": (255, 0, 0),
     "+FC": (255, 0, 0),
     "TORNADO": (255, 0, 0),
@@ -128,6 +138,9 @@ WX_LABEL = {
     "CG": "Ground Lightning",
     "VCTS": "Thunder Nearby",
     "TS": "Thunderstorm",
+    "-TSRA": "Light Thunderstorm Rain",
+    "TSRA": "Thunderstorm Rain",
+    "+TSRA": "Heavy Thunderstorm Rain",
     "FC": "Funnel Cloud",
     "+FC": "Tornado",
     "TORNADO": "Tornado",
@@ -136,7 +149,7 @@ WX_LABEL = {
 WX_FOG = ("FG", "BR", "FZFG", "HZ")
 WX_RAIN = ("-RA", "RA", "+RA", "-DZ", "DZ", "+DZ", "SHRA")
 WX_SNOW = ("-SN", "SN", "+SN", "SHSN", "-PE", "PE")
-WX_STORM = ("TS", "VCTS", "FC", "+FC", "TORNADO")
+WX_STORM = ("TS", "VCTS", "-TSRA", "TSRA", "+TSRA", "FC", "+FC", "TORNADO")
 WX_LTG = ("LTG", "DSNT", "CC", "CA", "CG")
 WX_WIND = ("WND",)
 
@@ -199,7 +212,7 @@ def _clamp(n, lo, hi):
 
 
 def load_config():
-    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg, DISPLAY_TYPE, MATRIX_SCROLL, MATRIX_SCROLL_SPEED, LIGHT_SHOW, TOUR_NORMAL_MS, TOUR_STEP_MS, _tour_phase, _tour_until, _tour_step, _ldr_filt, _ldr_out, _ldr_last_ms, _adc_lo, _adc_hi
+    global LED_PIN, NUM_LEDS, BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, BEACON_PULSE, CYCLE_DELAY, sleep_cfg, DISPLAY_TYPE, MATRIX_SCROLL, MATRIX_SCROLL_SPEED, SCROLL_TIMES, LIGHT_SHOW, TOUR_NORMAL_MS, TOUR_STEP_MS, _tour_phase, _tour_until, _tour_step, _ldr_filt, _ldr_out, _ldr_last_ms, _adc_lo, _adc_hi, _matrix_need_text, _matrix_hold_key, _oled_hold_key
     old_min = MIN_BRIGHTNESS
     old_max = MAX_BRIGHTNESS
     try:
@@ -217,6 +230,15 @@ def load_config():
         MATRIX_SCROLL_SPEED = _clamp(int(cfg.get("matrix_scroll_speed", 7)), 1, 10)
     except Exception:
         MATRIX_SCROLL_SPEED = 7
+    try:
+        new_times = _clamp(int(cfg.get("scroll_times", 1)), 1, 10)
+    except Exception:
+        new_times = 1
+    if new_times != SCROLL_TIMES:
+        _matrix_need_text = True
+        _matrix_hold_key = ""
+        _oled_hold_key = ""
+    SCROLL_TIMES = new_times
     old_show = LIGHT_SHOW
     old_flash = TOUR_NORMAL_MS
     old_step = TOUR_STEP_MS
@@ -263,7 +285,7 @@ def load_config():
     for k in sleep_cfg:
         if k in cfg:
             sleep_cfg[k] = cfg[k]
-    print("Display", DISPLAY_TYPE, "show", LIGHT_SHOW, "flash", TOUR_NORMAL_MS, "step", TOUR_STEP_MS, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED, "bright", MIN_BRIGHTNESS, "-", MAX_BRIGHTNESS)
+    print("Display", DISPLAY_TYPE, "show", LIGHT_SHOW, "flash", TOUR_NORMAL_MS, "step", TOUR_STEP_MS, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED, "times", SCROLL_TIMES, "bright", MIN_BRIGHTNESS, "-", MAX_BRIGHTNESS)
     if old_min != MIN_BRIGHTNESS or old_max != MAX_BRIGHTNESS:
         _ldr_filt = None
         _ldr_out = None
@@ -332,8 +354,16 @@ def connect_wifi(cfg):
                         break
                     time.sleep(1)
             if wlan.isconnected():
+                try:
+                    wlan.ipconfig(dhcp6=True)
+                except Exception:
+                    pass
                 status["ip"] = wlan.ifconfig()[0]
                 print("WiFi", status["ip"])
+                try:
+                    print("IPv6", wlan.ipconfig("addr6"))
+                except Exception:
+                    pass
                 return True
         except OSError as e:
             print("WiFi retry", attempt + 1, e)
@@ -581,6 +611,8 @@ def wx_bits(raw_text):
 
 
 def _http_get_text(url, timeout=12):
+    if netreq is not None:
+        return netreq.get_text(url, timeout)
     gc.collect()
     resp = None
     try:
@@ -828,12 +860,20 @@ def in_sleep_window():
 
 def sync_ntp():
     global clock_trusted
-    if ntptime is None:
+    if ntptime is not None:
+        try:
+            ntptime.settime()
+            clock_trusted = True
+            print("NTP ok")
+            return
+        except Exception as e:
+            print("NTP IPv4 failed:", e)
+    if netreq is None:
         return
     try:
-        ntptime.settime()
+        netreq.apply_ntp(netreq.ntp())
         clock_trusted = True
-        print("NTP ok")
+        print("NTP ok (IPv6)")
     except Exception as e:
         print("NTP failed:", e)
 
@@ -946,16 +986,20 @@ def _light_wx_segments(lh):
 
 
 def _tour_refresh_screens():
-    global _matrix_need_text, _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x
+    global _matrix_need_text, _matrix_hold_key, _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_pass, _oled_hold_key, _matrix_idle_until
     _matrix_need_text = True
+    _matrix_hold_key = ""
+    _matrix_idle_until = 0
     _oled_msgs = []
     _oled_msg_i = 0
     _oled_x = 128
-    _oled_title_x = 0
+    _oled_title_x = 128
+    _oled_pass = 0
+    _oled_hold_key = ""
 
 
 def tour_tick():
-    global _tour_phase, _tour_until, _tour_step
+    global _tour_phase, _tour_until, _tour_step, _matrix_ip_done
     now = time.ticks_ms()
     if LIGHT_SHOW != "TOUR":
         if _tour_phase != "normal":
@@ -977,6 +1021,7 @@ def tour_tick():
         _tour_phase = "dark"
         _tour_step = 0
         _tour_until = time.ticks_add(now, TOUR_DARK_MS)
+        _matrix_ip_done = True
         _tour_refresh_screens()
     elif _tour_phase == "dark":
         if not items:
@@ -1225,7 +1270,7 @@ def _ota_scroll_text():
 
 
 def _announce_ota():
-    global _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_blank_until, _matrix_need_text, _ota_scroll_pending
+    global _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_blank_until, _oled_pass, _oled_hold_key, _matrix_need_text, _matrix_hold_key, _ota_scroll_pending
     if _ota_banner_done:
         return
     _ota_scroll_pending = True
@@ -1233,8 +1278,11 @@ def _announce_ota():
     _oled_msgs = [("UPDATE", _ota_scroll_text())]
     _oled_msg_i = 0
     _oled_x = 128
-    _oled_title_x = 0
+    _oled_title_x = 128
+    _oled_pass = 0
+    _oled_hold_key = ""
     _matrix_need_text = True
+    _matrix_hold_key = ""
     try:
         paint_all((255, 140, 0))
     except Exception:
@@ -1360,7 +1408,7 @@ def _handle_conn(conn):
                 conn,
                 "help.html",
                 "text/html; charset=utf-8",
-                "<p>Copy help.html to the Pico, then reload.</p>",
+                "<p>Copy help.html to the chart, then reload.</p>",
             )
         elif method == "GET" and path == "/catalog":
             import wifi_manager
@@ -1505,9 +1553,12 @@ _oled_last_ms = 0
 _oled_msgs = []
 _oled_msg_i = 0
 _oled_x = 128
-_oled_title_x = 0
+_oled_title_x = 128
 _oled_blank_until = 0
+_oled_pass = 0
+_oled_hold_key = ""
 _matrix_need_text = True
+_matrix_hold_key = ""
 _matrix_ip_done = False
 _matrix_idle_until = 0
 _matrix_idle_pass = False
@@ -1544,8 +1595,12 @@ def _matrix_light_segments():
     return segs
 
 
+def _seg_key(segs):
+    return "|".join("%s%s" % (t, c) for t, c in segs)
+
+
 def refresh_matrix():
-    global _matrix_need_text, _matrix_ip_done, _matrix_idle_until, _matrix_idle_pass, _ota_banner_done, _ota_scroll_pending
+    global _matrix_need_text, _matrix_hold_key, _matrix_ip_done, _matrix_idle_until, _matrix_idle_pass, _ota_banner_done, _ota_scroll_pending
     try:
         import led_matrix
     except ImportError:
@@ -1553,6 +1608,7 @@ def refresh_matrix():
     if not led_matrix.active():
         return
     led_matrix.set_scroll_ms(197 - 17 * MATRIX_SCROLL_SPEED)
+    led_matrix.set_scroll_times(SCROLL_TIMES)
     if in_sleep_window():
         led_matrix.tick(0, True)
         return
@@ -1563,31 +1619,51 @@ def refresh_matrix():
         segs.append((_ota_scroll_text(), (255, 140, 0)))
     elif current is not None:
         segs.extend(_light_wx_segments(current))
-    else:
-        if not _matrix_ip_done:
-            ip = status.get("ip")
-            if ip:
-                segs.append((str(ip), (255, 180, 48)))
-        if _tour_phase != "dark":
+    elif _tour_phase == "dark":
+        pass
+    elif not _matrix_ip_done:
+        ip = status.get("ip")
+        if ip:
+            segs.append((str(ip), (255, 180, 48)))
+        else:
             segs.extend(_matrix_light_segments())
+    else:
+        segs.extend(_matrix_light_segments())
     idle = not segs
+    if idle and _tour_phase in ("dark", "populate"):
+        if _matrix_need_text or _matrix_hold_key:
+            led_matrix.set_segments([])
+            _matrix_need_text = False
+            _matrix_hold_key = ""
+        led_matrix.tick(_pwm_from_slider(_ldr_level()), True)
+        return
     if idle:
         if _matrix_idle_until and time.ticks_diff(now, _matrix_idle_until) < 0:
             return
+        if _matrix_idle_until:
+            _matrix_hold_key = ""
+            _matrix_need_text = True
+            _matrix_idle_until = 0
         segs = [("GREAT LAKES LIGHTHOUSES", MATRIX_IDLE_COLOR)]
     else:
         _matrix_idle_until = 0
+    key = _seg_key(segs)
+    if key and key == _matrix_hold_key:
+        return
     if _matrix_need_text:
         led_matrix.set_segments(segs)
         _matrix_need_text = False
         _matrix_idle_pass = idle
     pwm = _pwm_from_slider(_ldr_level())
     if led_matrix.tick(pwm, False):
+        _matrix_hold_key = key
         _matrix_need_text = True
         if _ota_scroll_pending:
             _ota_scroll_pending = False
             _ota_banner_done = True
-        _matrix_ip_done = True
+        ip = status.get("ip")
+        if ip and len(segs) == 1 and segs[0][0] == str(ip):
+            _matrix_ip_done = True
         if _matrix_idle_pass:
             _matrix_idle_until = time.ticks_add(now, MATRIX_IDLE_MS)
             led_matrix.set_segments([])
@@ -1731,11 +1807,11 @@ def _oled_messages():
             return [("Lighthouses", "  ".join(parts))]
     if _tour_phase == "dark":
         return [("Lighthouses", "")]
-    msgs = []
     if not _matrix_ip_done:
         ip = status.get("ip")
         if ip:
-            msgs.append(("IP", str(ip)))
+            return [("IP", str(ip))]
+    msgs = []
     cur = []
     for text, _color in _matrix_light_segments():
         if text == "-":
@@ -1747,12 +1823,14 @@ def _oled_messages():
     if cur:
         msgs.append((cur[0], "  ".join(cur)))
     if not msgs:
+        if _tour_phase in ("dark", "populate"):
+            return [("Lighthouses", "")]
         msgs.append(("Lighthouses", "GREAT LAKES LIGHTHOUSES"))
     return msgs
 
 
 def refresh_oled():
-    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_blank_until, _matrix_ip_done, _ota_banner_done, _ota_scroll_pending
+    global _oled_last_ms, _oled_msgs, _oled_msg_i, _oled_x, _oled_title_x, _oled_blank_until, _oled_pass, _oled_hold_key, _matrix_ip_done, _ota_banner_done, _ota_scroll_pending
     if oled is None:
         return
     now = time.ticks_ms()
@@ -1778,10 +1856,19 @@ def refresh_oled():
     _oled_last_ms = now
     try:
         if not _oled_msgs or _oled_msg_i >= len(_oled_msgs):
-            _oled_msgs = _oled_messages()
+            incoming = _oled_messages()
+            ik = "|".join("%s/%s" % (t, m) for t, m in incoming)
+            if _oled_hold_key and ik == _oled_hold_key:
+                oled.fill(0)
+                _oled_print_centered(OLED_TITLE_Y, "Lighthouses")
+                oled.show()
+                return
+            _oled_msgs = incoming
+            _oled_hold_key = ""
             _oled_msg_i = 0
             _oled_x = 128
-            _oled_title_x = 0
+            _oled_title_x = 128
+            _oled_pass = 0
         title, msg = _oled_msgs[_oled_msg_i]
         tw = _oled_str_w(msg)
         oled.fill(0)
@@ -1805,13 +1892,25 @@ def refresh_oled():
                 pause = MATRIX_IDLE_MS
             else:
                 pause = 800
+            _oled_pass += 1
+            if _oled_pass < SCROLL_TIMES:
+                _oled_x = 128
+                _oled_title_x = 128
+                return
             _oled_blank_until = time.ticks_add(now, pause)
             _oled_msg_i += 1
             _oled_x = 128
-            _oled_title_x = 0
+            _oled_title_x = 128
+            _oled_pass = 0
             if _oled_msg_i >= len(_oled_msgs):
+                idle_msg = len(_oled_msgs) == 1 and _oled_msgs[0][1] == "GREAT LAKES LIGHTHOUSES"
+                if idle_msg:
+                    _oled_hold_key = ""
+                else:
+                    _oled_hold_key = "|".join("%s/%s" % (t, m) for t, m in _oled_msgs)
+                if len(_oled_msgs) == 1 and _oled_msgs[0][0] == "IP":
+                    _matrix_ip_done = True
                 _oled_msgs = []
-                _matrix_ip_done = True
     except Exception as e:
         print("OLED:", e)
 

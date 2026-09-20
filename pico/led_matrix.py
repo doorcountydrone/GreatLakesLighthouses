@@ -45,7 +45,7 @@ _FONT_ROWS = {
     "Z": [[1,1,1,1,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
     "0": [[0,1,1,0],[1,0,0,1],[1,0,1,1],[1,1,0,1],[1,0,0,1],[0,1,1,0]],
     "1": [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[0,1,0],[1,1,1]],
-    "2": [[0,1,1,0],[1,0,0,1],[0,0,1,0],[0,1,0,0],[1,0,0,0],[1,1,1,1]],
+    "2": [[0,1,1,0],[1,0,0,1],[0,0,1,0],[0,1,0,0],[1,0,0,0],[1,1,15,1]],
     "3": [[1,1,1,0],[0,0,0,1],[0,1,1,0],[0,0,0,1],[0,0,0,1],[1,1,1,0]],
     "4": [[0,0,1,0],[0,1,1,0],[1,0,1,0],[1,1,1,1],[0,0,1,0],[0,0,1,0]],
     "5": [[1,1,1,1],[1,0,0,0],[1,1,1,0],[0,0,0,1],[1,0,0,1],[0,1,1,0]],
@@ -117,6 +117,8 @@ _index = None
 _columns = []
 _col_colors = []
 _offset = 0
+_pass = 0
+_scroll_times = 1
 _last_ms = 0
 _color = (255, 180, 48)
 _text = ""
@@ -194,8 +196,16 @@ def set_scroll_ms(ms):
         _scroll_ms = SCROLL_MS
 
 
+def set_scroll_times(n):
+    global _scroll_times
+    try:
+        _scroll_times = max(1, min(10, int(n)))
+    except Exception:
+        _scroll_times = 1
+
+
 def set_segments(segments):
-    global _columns, _col_colors, _offset, _color, _text
+    global _columns, _col_colors, _offset, _pass, _color, _text
     parts = []
     for text, color in segments or []:
         t = str(text or "").strip()
@@ -206,6 +216,7 @@ def set_segments(segments):
         _columns = []
         _col_colors = []
         _offset = 0
+        _pass = 0
         clear()
         return
     key = "|".join(p[0] + str(p[1]) for p in parts)
@@ -214,6 +225,9 @@ def set_segments(segments):
     _text = key
     cols = []
     colors = []
+    for _ in range(WIDTH):
+        cols.append(0)
+        colors.append((0, 0, 0))
     for text, color in parts:
         for ch in text.upper():
             glyph = _FONT.get(ch) or _FONT.get(" ")
@@ -232,6 +246,7 @@ def set_segments(segments):
     _col_colors = colors
     _color = parts[0][1]
     _offset = 0
+    _pass = 0
 
 
 def clear():
@@ -242,7 +257,7 @@ def clear():
 
 
 def tick(level=8, sleeping=False):
-    global _offset, _last_ms, _sleep_cleared
+    global _offset, _pass, _last_ms, _sleep_cleared
     if _np is None or _index is None:
         return False
     if sleeping:
@@ -266,11 +281,14 @@ def tick(level=8, sleeping=False):
         _offset += 1
         if _offset >= span:
             _offset = 0
-            return True
+            _pass += 1
+            if _pass >= _scroll_times:
+                _pass = 0
+                return True
         return False
     for x in range(WIDTH):
         idx = _offset + x
-        if idx >= n:
+        if idx < 0 or idx >= n:
             continue
         bits = _columns[idx] << 1
         if not bits:
@@ -284,5 +302,8 @@ def tick(level=8, sleeping=False):
     _offset += 1
     if _offset >= span:
         _offset = 0
-        return True
+        _pass += 1
+        if _pass >= _scroll_times:
+            _pass = 0
+            return True
     return False

@@ -52,7 +52,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            text = "Pico chart firmware is on the Settings tab after Fetch — not here.",
+            text = "Chart firmware is on the Settings tab after Fetch — not here.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -61,7 +61,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             title = "Quick start",
             body = "1. On your phone, join the chart’s setup Wi-Fi: name GreatLakes-Setup, password door1234.\n\n" +
                 "2. Settings tab: enter your home (or hotel) Wi-Fi name and password — not the setup password — then tap Save & reboot. Wait for the chart to restart and join your network.\n\n" +
-                "3. Lights tab: the Door County lights are already there. Change the list if you want, then tap Save to Pico.\n\n" +
+                "3. Lights tab: the Door County lights are already there. Change the list if you want, then tap Save to chart.\n\n" +
                 "Done. The lights blink like the real lighthouses. In Settings you can keep them flashing, or populate one by one (dark, then each light in order with the name on OLED or matrix). Use this Help tab for more detail.",
         )
 
@@ -88,18 +88,18 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 Step(
                     title = "1. Connect to the chart’s Wi-Fi",
                     body = "The first time you plug the chart in, it makes its own Wi-Fi named GreatLakes-Setup. Password: door1234. Join that network on your phone. Turn off mobile data if your phone keeps leaving Wi-Fi.\n\n" +
-                        "Pico address: 192.168.4.1",
+                        "Chart address: 192.168.4.1",
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Step(
-                    title = "2. Give the chart your home Wi-Fi (Settings)",
+                    title = "2. Give the chart your home Wi-Fi (Settings / Chart settings)",
                     body = "Type your home or hotel Wi-Fi name and password. That is so the chart can reach the internet — not so your phone can join GreatLakes-Setup.\n\n" +
                         "Tap Save & reboot. After it restarts, put your phone back on home Wi-Fi. The chart’s address is now its home-network address, for example http://192.168.1.22. You can find that in your router’s device list.",
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Step(
-                    title = "3. Set your lights (Lights tab)",
-                    body = "Tap Fetch from Pico to see what is already on the chart. A finished Door County chart already has Kewaunee through Rock Island. Save to Pico writes your list. List order is the order of the lights on the strip, south to north.",
+                    title = "3. Set your lights (Lights / Lighthouses)",
+                    body = "Tap Fetch from chart to see what is already on the chart. A finished Door County chart already has Kewaunee through Rock Island. Save to chart writes your list. List order is the order of the lights on the strip, south to north.",
                 )
             }
         }
@@ -113,9 +113,9 @@ fun HelpScreen(modifier: Modifier = Modifier) {
 
         HelpCard(
             title = "Your light list",
-            body = "• Pico address: tap Find chart, or Fetch / Save / Identify. The app tries the box, the last home IP it used, and 192.168.4.1. On success it fills in the working address. LED 1 is the first light on the strip.\n\n" +
-                "• Fetch from Pico / Reload: loads the list that is already on the chart.\n\n" +
-                "• Save to Pico / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights.\n\n" +
+            body = "• Chart address: tap Find chart, or Fetch / Save / Identify. The app tries the box, the last home IP it used, and 192.168.4.1. On success it fills in the working address. LED 1 is the first light on the strip.\n\n" +
+                "• Fetch from chart / Reload: loads the list that is already on the chart.\n\n" +
+                "• Save to chart / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights.\n\n" +
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
                 "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
                 "• Drag the handle on the left to reorder. First in the list is the first light on the strip (usually the southernmost). In the browser, use Up / Down.\n\n" +
@@ -127,7 +127,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         HelpCard(
             title = "Chart tab",
             body = "Bold lighthouse symbols are the lights on your strip. Cream is white, then red or green. A faded lighthouse is skipped. The number is the LED.\n\n" +
-                "Faint colored dots are catalog aids not on your list yet. Turn them on with Catalog. Lighthouses shows named towers — Canal North Pierhead, Cana Island, ranges. Lights shows numbered marks, marinas, and breakwaters. All shows both. None / Green / Red / Both is for buoys. Tap a dot to add it, or tap empty water for the nearest catalog aid. New lights go at the end of the list — drag on Lights to match the strip, then Save to Pico.\n\n" +
+                "Faint colored dots are catalog aids not on your list yet. Turn them on with Catalog. Lighthouses shows named towers — Canal North Pierhead, Cana Island, ranges. Lights shows numbered marks, marinas, and breakwaters. All shows both. None / Green / Red / Both is for buoys. Tap a dot to add it, or tap empty water for the nearest catalog aid. New lights go at the end of the list — drag on Lights to match the strip, then Save to chart.\n\n" +
                 "Use Map for Google Maps (Satellite is there too), or NOAA for the official ENC nautical chart — depths, channels, and the real aids. Same pins on both. NOAA is not for navigation.\n\n" +
                 "Tap a strip lighthouse to Identify that LED. Your phone must be on the same Wi-Fi as the chart. The Chart map needs internet for tiles, so on setup Wi-Fi use the Lights tab instead.\n\n" +
                 "Custom lights without coordinates do not appear.",
@@ -153,15 +153,16 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 "• Home Wi-Fi name and password are for your router, not GreatLakes-Setup.\n\n" +
                 "• Light show: Keep flashing leaves every light on its real characteristic. Populate one by one goes dark, then lights each lighthouse in list order with the name on OLED or matrix. All lights flash is how many seconds they stay flashing as a set (10 to 1800; 180 is 3 minutes). Each light is how many seconds each lighthouse stays on during the tour (2 to 120). Save after you change this — no reboot needed.\n\n" +
                 "• Extra display: LED strip only, OLED (GPIO 16–19), or LED matrix (GPIO 1). The lighthouse strip is always on. Save & reboot after you change this.\n\n" +
-                "• LED matrix scroll: Weather only (default) lists lights that currently have rain, fog, snow, lightning, or similar. If none do, GREAT LAKES LIGHTHOUSES scrolls about every 15 seconds. All lights scrolls every light. Matrix scroll speed is 1 (slow) to 10 (fast). The IP scrolls once at startup.\n\n" +
+                "• LED matrix scroll: Weather only (default) lists lights that currently have rain, fog, snow, lightning, or similar. If none do, GREAT LAKES LIGHTHOUSES scrolls. All lights scrolls every light. Matrix scroll speed is 1 (slow) to 10 (fast). Scroll times is how many times each message crosses the OLED or matrix (1 to 10), then it waits until the text changes. Text enters from the right.\n\n" +
                 "• Max brightness is how bright the lights get in a bright room (1 to 30). Min brightness is the dark-room floor (0 = off, 1–2 is a faint glow).\n\n" +
-                "• Optional OLED (SSD1306): GPIO 16 data (SDA), 17 clock (SCL), 18 for 3.3 V, 19 for ground. Copy ssd1306.py, writer.py, and sans18.py onto the Pico. The screen scrolls the same text as the matrix (IP once, then light names and weather) using the large sans18 font. Matrix scroll speed also controls the OLED.\n\n" +
-                "• Optional LED matrix (8x32 WS2812): data on GPIO 1, 5 V and common ground — not from pin 18. Copy led_matrix.py onto the Pico. Light names use flight-category color; weather codes use MetarMap colors.\n\n" +
+                "• Optional OLED (SSD1306): GPIO 16 data (SDA), 17 clock (SCL), 18 for 3.3 V, 19 for ground. Copy ssd1306.py, writer.py, and sans18.py onto the chart. The screen scrolls the same text as the matrix (IP once, then light names and weather) using the large sans18 font. Matrix scroll speed also controls the OLED.\n\n" +
+                "• Optional LED matrix (8x32 WS2812): data on GPIO 1, 5 V and common ground — not from pin 18. Copy led_matrix.py onto the chart. Light names use flight-category color; weather codes use MetarMap colors.\n\n" +
                 "• Refresh seconds is how often the chart checks online (30 to 3600). 300 is every 5 minutes.\n\n" +
+                "• Beacon pulse on clear weather is a gentle brightness pulse when there is no rain, fog, snow, or similar.\n\n" +
                 "• Sleep turns the lights off and on each night. Set the time offset first (Central: -6 in winter, -5 in daylight saving. Eastern: -5 / -4).\n\n" +
                 "• Weekend / long off is an extra off stretch, for example Friday evening to Monday morning. It works together with nightly sleep.\n\n" +
                 "• Save writes the settings. Save & reboot is the sure way after you change Wi-Fi.\n\n" +
-                "In the browser, Pico settings always uses Save & Reboot.",
+                "In the browser, Chart settings always uses Save & Reboot.",
         )
 
         HelpCard(
@@ -174,7 +175,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         HelpCard(
             title = "Using a browser instead of the app",
             body = "On GreatLakes-Setup, open http://192.168.4.1 in any browser. After the chart is on home Wi-Fi, open http:// then the chart’s home-network address.\n\n" +
-                "The app has four tabs at the bottom: Lights, Chart, Settings, and Help. In a browser you will see Lighthouses, Pico settings, and Help. Same jobs: light list, Wi-Fi/brightness/sleep, and these instructions. The Chart tab is app-only.",
+                "The app has four tabs at the bottom: Lights, Chart, Settings, and Help. In a browser you will see Lighthouses, Chart settings, and Help. Same jobs: light list, Wi-Fi/brightness/sleep, and these instructions. The Chart tab is app-only.",
         )
 
         Text(
@@ -189,7 +190,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             body = "• Can’t connect: join GreatLakes-Setup (password door1234) and tap Find chart, or use address 192.168.4.1. Turn off mobile data so the phone stays on that Wi-Fi.\n\n" +
                 "• Fetch or Save failed: your phone must be on the same Wi-Fi as the chart. Tap Find chart. On setup Wi-Fi that is GreatLakes-Setup. After setup, both must be on your home Wi-Fi.\n\n" +
                 "• Type http:// in front of the address if the page won’t open.\n\n" +
-                "• Phone hotspot: putting the chart on a phone hotspot that uses cellular often fails. Use home or hotel Wi-Fi when you can.",
+                "• Phone hotspot: with hotel Wi‑Fi off, Find chart and Fetch can work on this phone while the chart is on the hotspot. Weather can use IPv6 on some T-Mobile hotspots. If hotel Wi‑Fi is also on, the app often cannot reach the chart.",
         )
 
         HelpCard(

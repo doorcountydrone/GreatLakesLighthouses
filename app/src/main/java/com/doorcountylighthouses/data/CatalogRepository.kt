@@ -176,7 +176,17 @@ object CatalogRepository {
         "Wisconsin / Illinois",
         "Green Bay",
         "Michigan",
+        "Lake Huron",
+        "Canada Huron",
+        "Georgian Bay",
+        "North Channel",
+        "Lake Erie",
+        "Canada Erie",
+        "Lake America",
+        "Canada Ontario",
         "Straits / North",
+        "Lake Superior",
+        "Canada Superior",
     )
 
     private val numberedAid = Regex("""(?:\blight\s+\d+|\bpier\s+no\.?\s*\d+|\s+\d+[a-z]?$)""", RegexOption.IGNORE_CASE)
@@ -235,6 +245,16 @@ object CatalogRepository {
         "Indiana / Chicago" -> "Chicago"
         "Wisconsin / Illinois" -> "Wisconsin"
         "Straits / North" -> "Straits"
+        "Lake Huron" -> "Huron"
+        "Canada Huron" -> "Huron ON"
+        "Georgian Bay" -> "Georgian"
+        "North Channel" -> "Channel"
+        "Lake Erie" -> "Erie"
+        "Canada Erie" -> "Erie ON"
+        "Lake America" -> "America"
+        "Canada Ontario" -> "Ontario ON"
+        "Lake Superior" -> "Superior"
+        "Canada Superior" -> "Superior ON"
         else -> region
     }
 

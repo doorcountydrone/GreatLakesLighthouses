@@ -8,6 +8,11 @@ import gc
 import machine
 import os
 
+try:
+    import netreq
+except ImportError:
+    netreq = None
+
 VERSION_URL = "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/version.json"
 VERSION_URL_PAGES = "https://doorcountydrone.github.io/GreatLakesLighthouses/version.json"
 PENDING_FILE = "update_pending.json"
@@ -37,6 +42,24 @@ def _temp_name(name):
 
 def _download_url_to_file(url, dest_path, dest_name, timeout, what):
     gc.collect()
+    if netreq is not None:
+        try:
+            netreq.download(url, dest_path, timeout)
+            if _staging_file_looks_like_html_error(dest_path, dest_name):
+                print("OTA:", what, "- got HTML not file (wrong URL or host error page)")
+                try:
+                    os.remove(dest_path)
+                except Exception:
+                    pass
+                return False
+            return True
+        except Exception as ex:
+            print("OTA:", what, "request error:", ex)
+            try:
+                os.remove(dest_path)
+            except Exception:
+                pass
+            return False
     r = None
     ok = False
     try:
@@ -77,6 +100,16 @@ def _download_url_to_file(url, dest_path, dest_name, timeout, what):
 
 def _get_url_text(url, timeout, what):
     gc.collect()
+    if netreq is not None:
+        try:
+            data = netreq.get_text(url, timeout)
+            if data and data.lstrip().startswith("<"):
+                print("OTA:", what, "- got HTML not JSON/text (wrong URL or host error page)")
+                return False, None
+            return True, data
+        except Exception as ex:
+            print("OTA:", what, "request error:", ex)
+            return False, None
     r = None
     out_ok = False
     out_data = None

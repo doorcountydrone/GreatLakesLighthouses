@@ -13,7 +13,7 @@ for r in rows:
     if not m:
         continue
     lon, lat = float(m.group(1)), float(m.group(2))
-    if not (41.55 <= lat <= 46.15 and -88.25 <= lon <= -84.55):
+    if not (41.30 <= lat <= 46.30 and -88.25 <= lon <= -78.75):
         continue
     hits.append({
         "lat": lat,

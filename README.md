@@ -2,7 +2,7 @@
 
 **13 lighthouses** from Kewaunee through Rock Island on a **Raspberry Pi Pico 2 W** NeoPixel strip. Each LED uses that light’s **real color and flash characteristic** (USCG Light List / historic pattern), not weather colors.
 
-The Android app has a **Lake Michigan catalog** (named lighthouses, pier lights, and USCG red/green buoys, with color and flash already filled in). Search or tap the Chart to add the ones on *your* strip, then **Save to Pico**. Restore defaults still loads the Kewaunee → Rock Island pack. The app and the map’s web page both have a **Help** tab. The Chart tab can show Google Maps or a NOAA ENC (not for navigation).
+The Android app has a **Great Lakes catalog** (named lighthouses, pier lights, and US/Canadian lighted buoys on all five lakes, with color and flash already filled in). Search or tap the Chart to add the ones on *your* strip, then **Save to chart**. Restore defaults still loads the Kewaunee → Rock Island pack. The app and the map’s web page both have a **Help** tab. The Chart tab can show Google Maps or a NOAA ENC (not for navigation).
 
 ## Light characteristics
 
@@ -48,11 +48,11 @@ See `pico/WIRING.txt`. Minimum:
 5. Enter home Wi-Fi, LED count, brightness, timezone (`-6` Central standard, `-5` daylight), then **Save & Reboot**.
 6. After reboot the strip chases south→north in each light’s color, then runs the real flash patterns.
 
-On the home LAN (and in setup AP mode) the Pico serves:
+On the home LAN (and in setup AP mode) the chart serves:
 
 - `http://<pico-ip>/status`
 - `GET/POST http://<pico-ip>/lighthouses` — app fetch/save of the editable list
 
-In the app: set **Pico address** to `192.168.4.1` on GreatLakes-Setup, or the Pico’s LAN IP on home Wi-Fi. **Restore defaults** reloads the bundled Kewaunee → Rock Island set.
+In the app: set **Chart address** to `192.168.4.1` on GreatLakes-Setup, or the chart’s LAN IP on home Wi-Fi. **Restore defaults** reloads the bundled Kewaunee → Rock Island set.
 
 If you add more lights than the strip has chips, extra LEDs will not show until you wire them and set LED count.

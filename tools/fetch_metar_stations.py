@@ -5,7 +5,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-URL = "https://aviationweather.gov/api/data/stationinfo?bbox=41.4,-88.6,46.3,-84.4&format=json"
+URL = "https://aviationweather.gov/api/data/stationinfo?bbox=41.2,-92.5,49.1,-76.0&format=json"
 
 
 def has_metar(station):
@@ -23,7 +23,7 @@ def main():
     stations = []
     for row in data:
         icao = (row.get("icaoId") or "").strip().upper()
-        if not icao.startswith("K"):
+        if not (icao.startswith("K") or icao.startswith("C")):
             continue
         if not has_metar(row):
             continue
@@ -36,7 +36,7 @@ def main():
     stations.sort(key=lambda item: item["icao"])
     dest = ROOT / "tools" / "metar_stations.json"
     dest.write_text(
-        json.dumps({"area": "Lake Michigan METAR stations", "count": len(stations), "stations": stations}, indent=2),
+        json.dumps({"area": "Great Lakes METAR stations", "count": len(stations), "stations": stations}, indent=2),
         encoding="utf-8",
     )
     print("wrote", dest, "count", len(stations))

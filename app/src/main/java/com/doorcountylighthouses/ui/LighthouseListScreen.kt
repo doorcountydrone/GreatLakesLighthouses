@@ -134,7 +134,7 @@ fun LighthouseListScreen(
             OutlinedTextField(
                 value = picoBaseUrl,
                 onValueChange = onPicoBaseUrlChange,
-                label = { Text("Pico address") },
+                    label = { Text("Chart address") },
                 placeholder = { Text("192.168.4.1") },
                 supportingText = { Text("Find chart, or leave this set — Fetch tries setup and the last home IP") },
                 singleLine = true,
@@ -168,7 +168,7 @@ fun LighthouseListScreen(
                 Button(
                     onClick = {
                         isLoading = true
-                        statusMessage = "Fetching from Pico…"
+                        statusMessage = "Fetching from the chart…"
                         scope.launch {
                             val url = PicoUrls.normalize(picoBaseUrl)
                             if (url != picoBaseUrl) onPicoBaseUrlChange(url)
@@ -176,7 +176,7 @@ fun LighthouseListScreen(
                                 is PicoLighthousesApi.FetchResult.Success -> {
                                     persist(result.lights)
                                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
-                                    statusMessage = "Fetched ${result.lights.size} lights from Pico"
+                                    statusMessage = "Fetched ${result.lights.size} lights from the chart"
                                 }
                                 is PicoLighthousesApi.FetchResult.Error ->
                                     statusMessage = "Fetch failed: ${result.message}"
@@ -187,11 +187,11 @@ fun LighthouseListScreen(
                     enabled = !isLoading,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
-                ) { Text("Fetch from Pico") }
+                ) { Text("Fetch from chart") }
                 Button(
                     onClick = {
                         isLoading = true
-                        statusMessage = "Saving to Pico…"
+                        statusMessage = "Saving to the chart…"
                         scope.launch {
                             val url = PicoUrls.normalize(picoBaseUrl)
                             if (url != picoBaseUrl) onPicoBaseUrlChange(url)
@@ -199,10 +199,10 @@ fun LighthouseListScreen(
                                 is PicoLighthousesApi.SaveResult.Success -> {
                                     persist(lights)
                                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
-                                    statusMessage = "Saved ${lights.count { !it.skip }} lights to Pico"
+                                    statusMessage = "Saved ${lights.count { !it.skip }} lights to the chart"
                                 }
                                 is PicoLighthousesApi.SaveResult.Error ->
-                                    statusMessage = "Save failed: ${result.message}. Connect to the Pico and try again."
+                                    statusMessage = "Save failed: ${result.message}. Connect to the chart and try again."
                             }
                             isLoading = false
                         }
@@ -210,7 +210,7 @@ fun LighthouseListScreen(
                     enabled = !isLoading,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = MaterialTheme.colorScheme.onPrimary),
-                ) { Text("Save to Pico") }
+                ) { Text("Save to chart") }
             }
             Button(
                 onClick = { showCatalog = true },
@@ -275,7 +275,7 @@ fun LighthouseListScreen(
                         statusMessage = when (val result = picoApi.identify(url, light.led)) {
                             is PicoLighthousesApi.IdentifyResult.Success -> {
                                 if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
-                                "LED ${result.led + 1} only on the Pico for ${result.ms / 1000} seconds."
+                                "LED ${result.led + 1} only on the chart for ${result.ms / 1000} seconds."
                             }
                             is PicoLighthousesApi.IdentifyResult.Error ->
                                 "Identify failed: ${result.message}"
@@ -447,7 +447,7 @@ private fun CatalogPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lake Michigan catalog") },
+        title = { Text("Great Lakes catalog") },
         text = {
             Column {
                 LazyRow(

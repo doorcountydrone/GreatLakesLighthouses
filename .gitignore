@@ -18,3 +18,4 @@ secrets.properties
 tools/wikidata_lh.json
 tools/overpass_lm.json
 tools/uscg_d9/
+tools/ccg_inland/

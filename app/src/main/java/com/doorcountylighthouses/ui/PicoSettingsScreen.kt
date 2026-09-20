@@ -67,6 +67,9 @@ import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_DEFAULT
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MAX
 import com.doorcountylighthouses.data.MATRIX_SCROLL_SPEED_MIN
 import com.doorcountylighthouses.data.PicoConfig
+import com.doorcountylighthouses.data.SCROLL_TIMES_DEFAULT
+import com.doorcountylighthouses.data.SCROLL_TIMES_MAX
+import com.doorcountylighthouses.data.SCROLL_TIMES_MIN
 import com.doorcountylighthouses.data.TOUR_FLASH_S_DEFAULT
 import com.doorcountylighthouses.data.TOUR_FLASH_S_MAX
 import com.doorcountylighthouses.data.TOUR_FLASH_S_MIN
@@ -104,10 +107,12 @@ fun PicoSettingsScreen(
     var matrixScroll by remember { mutableStateOf("WEATHER") }
     var matrixScrollMenuExpanded by remember { mutableStateOf(false) }
     var matrixScrollSpeed by remember { mutableFloatStateOf(MATRIX_SCROLL_SPEED_DEFAULT.toFloat()) }
+    var scrollTimes by remember { mutableFloatStateOf(SCROLL_TIMES_DEFAULT.toFloat()) }
     var brightness by remember { mutableFloatStateOf(0.18f) }
     var minBrightness by remember { mutableStateOf("2") }
     var maxBrightness by remember { mutableFloatStateOf(18f) }
     var cycleDelay by remember { mutableStateOf("300") }
+    var beaconPulse by remember { mutableStateOf(true) }
     var timezoneOffsetHours by remember { mutableStateOf("-5") }
     var sleepEnabled by remember { mutableStateOf(false) }
     var sleepAtHour by remember { mutableStateOf("22") }
@@ -146,10 +151,15 @@ fun PicoSettingsScreen(
             MATRIX_SCROLL_SPEED_MIN.toFloat(),
             MATRIX_SCROLL_SPEED_MAX.toFloat(),
         )
+        scrollTimes = cfg.scrollTimes.toFloat().coerceIn(
+            SCROLL_TIMES_MIN.toFloat(),
+            SCROLL_TIMES_MAX.toFloat(),
+        )
         brightness = cfg.brightness
         minBrightness = cfg.minBrightness.toString()
         maxBrightness = cfg.maxBrightness.toFloat().coerceIn(2f, BRIGHTNESS_SLIDER_MAX.toFloat())
         cycleDelay = cfg.cycleDelay.coerceIn(CYCLE_DELAY_MIN, CYCLE_DELAY_MAX).toString()
+        beaconPulse = cfg.beaconPulse
         timezoneOffsetHours = cfg.timezoneOffsetHours.toString()
         sleepEnabled = cfg.sleepEnabled
         sleepAtHour = cfg.sleepAtHour.toString()
@@ -178,10 +188,12 @@ fun PicoSettingsScreen(
         tourStepS = tourStepS.toIntOrNull()?.coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX) ?: TOUR_STEP_S_DEFAULT,
         matrixScroll = matrixScroll,
         matrixScrollSpeed = matrixScrollSpeed.toInt().coerceIn(MATRIX_SCROLL_SPEED_MIN, MATRIX_SCROLL_SPEED_MAX),
+        scrollTimes = scrollTimes.toInt().coerceIn(SCROLL_TIMES_MIN, SCROLL_TIMES_MAX),
         brightness = maxBrightness / 255f,
         minBrightness = minBrightness.toIntOrNull()?.coerceIn(0, BRIGHTNESS_SLIDER_MAX) ?: 0,
         maxBrightness = maxBrightness.toInt().coerceIn(1, BRIGHTNESS_SLIDER_MAX),
         cycleDelay = cycleDelay.toIntOrNull()?.coerceIn(CYCLE_DELAY_MIN, CYCLE_DELAY_MAX) ?: 300,
+        beaconPulse = beaconPulse,
         sleepEnabled = sleepEnabled,
         sleepAtHour = sleepAtHour.toIntOrNull() ?: 22,
         sleepAtMinute = sleepAtMinute.toIntOrNull() ?: 0,
@@ -208,7 +220,7 @@ fun PicoSettingsScreen(
                     applyConfig(result.config)
                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                     if (result.config.updateAvailable) updateOpen = true
-                    statusMessage = "Loaded settings from Pico" +
+                    statusMessage = "Loaded settings from the chart" +
                         (result.config.firmwareVersion?.let { " (v$it)" } ?: "")
                 }
                 is PicoConfigApi.FetchResult.Error ->
@@ -220,17 +232,17 @@ fun PicoSettingsScreen(
 
     fun saveToPico(reboot: Boolean) {
         isLoading = true
-        statusMessage = if (reboot) "Saving and rebooting…" else "Saving to Pico…"
+        statusMessage = if (reboot) "Saving and rebooting…" else "Saving to the chart…"
         scope.launch {
             val url = PicoUrls.normalize(picoBaseUrl)
             if (url != picoBaseUrl) onPicoBaseUrlChange(url)
             when (val result = api.save(url, currentConfig(), reboot)) {
                 is PicoConfigApi.SaveResult.Success -> {
                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
-                    statusMessage = if (reboot) "Saved. Pico is rebooting." else "Saved settings"
+                    statusMessage = if (reboot) "Saved. The chart is rebooting." else "Saved settings"
                 }
                 is PicoConfigApi.SaveResult.Error ->
-                    statusMessage = "Save failed: ${result.message}. Copy firmware 0.4.0+ to the Pico."
+                    statusMessage = "Save failed: ${result.message}. Copy firmware 0.4.0+ to the chart."
             }
             isLoading = false
         }
@@ -270,11 +282,11 @@ fun PicoSettingsScreen(
         )
         Text(
             text = when {
-                firmwareVersion == null -> "Pico firmware: Fetch to load"
+                firmwareVersion == null -> "Chart firmware: Fetch to load"
                 updateAvailable ->
-                    "Pico firmware v$firmwareVersion — update available" +
+                    "Chart firmware v$firmwareVersion — update available" +
                         (updateVersion?.let { " v$it" } ?: "")
-                else -> "Pico firmware v$firmwareVersion — up to date"
+                else -> "Chart firmware v$firmwareVersion — up to date"
             },
             style = MaterialTheme.typography.titleMedium,
             color = if (updateAvailable) Amber else Fog,
@@ -283,7 +295,7 @@ fun PicoSettingsScreen(
         OutlinedTextField(
             value = picoBaseUrl,
             onValueChange = onPicoBaseUrlChange,
-            label = { Text("Pico address") },
+            label = { Text("Chart address") },
             supportingText = { Text("Find chart, or Fetch — it tries this address, the last home IP, and 192.168.4.1") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -335,7 +347,7 @@ fun PicoSettingsScreen(
             onToggle = { wifiOpen = !wifiOpen },
         ) {
             Text(
-                text = "This is the router the Pico joins for internet — not the GreatLakes-Setup network. Leave password blank to keep the one already saved on the Pico.",
+                text = "This is the router the chart joins for internet — not the GreatLakes-Setup network. Leave password blank to keep the one already saved on the chart.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Fog,
             )
@@ -382,7 +394,7 @@ fun PicoSettingsScreen(
                 if (displayType == "LED_MATRIX") {
                     append(" · ")
                     append(MATRIX_SCROLL_CHOICES.firstOrNull { it.id == matrixScroll }?.label ?: "Weather only")
-                    append(" · speed ${matrixScrollSpeed.toInt()}")
+                    append(" · speed ${matrixScrollSpeed.toInt()} · ${scrollTimes.toInt()}×")
                 }
                 append(" · max ${maxBrightness.toInt()} · min ${minBrightness.ifBlank { "2" }} · refresh ${cycleDelay.ifBlank { "300" }}s")
             },
@@ -527,6 +539,17 @@ fun PicoSettingsScreen(
                 enabled = !isLoading,
             )
             Text(
+                text = "Scroll times: ${scrollTimes.toInt()} (then it waits until the text changes)",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = scrollTimes,
+                onValueChange = { scrollTimes = it },
+                valueRange = SCROLL_TIMES_MIN.toFloat()..SCROLL_TIMES_MAX.toFloat(),
+                steps = SCROLL_TIMES_MAX - SCROLL_TIMES_MIN - 1,
+                enabled = !isLoading,
+            )
+            Text(
                 text = "Max brightness: ${maxBrightness.toInt()} (bright-room ceiling)",
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -561,6 +584,18 @@ fun PicoSettingsScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = settingsFieldColors(),
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Beacon pulse on clear weather",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = beaconPulse, onCheckedChange = { beaconPulse = it }, enabled = !isLoading)
+            }
             Text(
                 text = "Strip data pin",
                 style = MaterialTheme.typography.titleSmall,

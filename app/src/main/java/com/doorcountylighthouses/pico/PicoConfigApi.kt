@@ -134,11 +134,11 @@ class PicoConfigApi(private val context: Context) {
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty().trim()
             if (text.isEmpty()) {
-                return FetchResult.Error("Empty reply from Pico (HTTP $code). Check the Pico address and Wi-Fi.")
+                return FetchResult.Error("Empty reply from the chart (HTTP $code). Check the chart address and Wi-Fi.")
             }
             val json = JSONObject(text)
             if (!json.has("led_pin")) {
-                return FetchResult.Error("Pico firmware is too old for settings. Copy main.py and wifi_manager.py (0.4.0+) to the Pico.")
+                return FetchResult.Error("Chart firmware is too old for settings. Copy main.py and wifi_manager.py (0.4.0+) to the chart.")
             }
             FetchResult.Success(fromJson(json), rememberWorkingPicoUrl(context, url))
         } catch (e: Exception) {
@@ -164,12 +164,12 @@ class PicoConfigApi(private val context: Context) {
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code in 200..299) {
                 val json = runCatching { JSONObject(text) }.getOrNull()
-                    ?: return SaveResult.Error("Invalid response from Pico")
+                    ?: return SaveResult.Error("Invalid response from the chart")
                 val saved = json.optString("message").contains("saved", ignoreCase = true)
                 if (json.optBoolean("ok", false) && saved) {
                     SaveResult.Success(rememberWorkingPicoUrl(context, url))
                 } else {
-                    SaveResult.Error(json.optString("message", "Pico firmware is too old. Copy 0.4.0+ files."))
+                    SaveResult.Error(json.optString("message", "Chart firmware is too old. Copy 0.4.0+ files."))
                 }
             } else {
                 SaveResult.Error("HTTP $code")
@@ -190,9 +190,11 @@ class PicoConfigApi(private val context: Context) {
         put("display_type", config.displayType)
         put("matrix_scroll", config.matrixScroll)
         put("matrix_scroll_speed", config.matrixScrollSpeed.coerceIn(1, 10))
+        put("scroll_times", config.scrollTimes.coerceIn(1, 10))
         put("light_show", config.lightShow)
         put("tour_flash_s", config.tourFlashS.coerceIn(TOUR_FLASH_S_MIN, TOUR_FLASH_S_MAX))
         put("tour_step_s", config.tourStepS.coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX))
+        put("beacon_pulse", config.beaconPulse)
         put("min_brightness", config.minBrightness.coerceIn(0, BRIGHTNESS_SLIDER_MAX))
         put("max_brightness", config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX))
         put("brightness", (config.maxBrightness.coerceIn(1, BRIGHTNESS_SLIDER_MAX) / 255.0).coerceIn(0.02, 1.0))
@@ -224,11 +226,13 @@ class PicoConfigApi(private val context: Context) {
             if (raw in setOf("WEATHER", "ALL")) raw else "WEATHER"
         },
         matrixScrollSpeed = json.intLoose("matrix_scroll_speed", 7).coerceIn(1, 10),
+        scrollTimes = json.intLoose("scroll_times", 1).coerceIn(1, 10),
         lightShow = json.optString("light_show", "TOUR").uppercase().let { raw ->
             if (raw in setOf("FLASH", "TOUR")) raw else "TOUR"
         },
         tourFlashS = json.intLoose("tour_flash_s", TOUR_FLASH_S_DEFAULT).coerceIn(TOUR_FLASH_S_MIN, TOUR_FLASH_S_MAX),
         tourStepS = json.intLoose("tour_step_s", TOUR_STEP_S_DEFAULT).coerceIn(TOUR_STEP_S_MIN, TOUR_STEP_S_MAX),
+        beaconPulse = json.optBoolean("beacon_pulse", true),
         brightness = json.floatLoose("brightness", 0.18f).coerceIn(0.02f, 1f),
         minBrightness = json.intLoose("min_brightness", 2).coerceIn(0, BRIGHTNESS_SLIDER_MAX),
         maxBrightness = run {

@@ -9,6 +9,9 @@ WD = Path(__file__).with_name("wikidata_lh.json")
 STATIONS = Path(__file__).with_name("metar_stations.json")
 APP_CATALOG = ROOT / "app" / "src" / "main" / "assets" / "catalog.json"
 PICO_CATALOG = ROOT / "pico" / "catalog.json"
+# All five Great Lakes (US and Canada). Canadian shores are not in USCG D9.
+CATALOG_LAT = (41.30, 49.05)
+CATALOG_LON = (-92.35, -76.15)
 
 
 def parse_characteristic(raw: str):
@@ -88,6 +91,18 @@ def parse_characteristic(raw: str):
     if sl.startswith("QF") or sl.startswith("Q ") or sl.startswith("Q"):
         return {"char": f"Q {color}", "color": color, "period_s": 1.0, "on_s": [0.3], "off_s": [0.7]}
 
+    m = re.search(r"LFL\s*[WRG]\s*(\d+(?:\.\d+)?)\s*S", sl)
+    if m:
+        period = float(m.group(1))
+        on = 2.0 if period >= 6 else max(1.0, period / 3)
+        return {
+            "char": f"LFl {color} {period:g}s",
+            "color": color,
+            "period_s": period,
+            "on_s": [on],
+            "off_s": [max(0.1, period - on)],
+        }
+
     m = re.search(r"FL\s*[WRG]\s*(\d+(?:\.\d+)?)\s*S", sl)
     if m:
         period = float(m.group(1))
@@ -100,19 +115,50 @@ def parse_characteristic(raw: str):
     return None
 
 
+def in_catalog_box(lat, lon):
+    return CATALOG_LAT[0] <= lat <= CATALOG_LAT[1] and CATALOG_LON[0] <= lon <= CATALOG_LON[1]
+
+
+def in_huron_box(lat, lon):
+    return 43.00 <= lat <= 46.30 and -84.80 < lon <= -81.60
+
+
+def in_erie_box(lat, lon):
+    return 41.30 <= lat <= 42.95 and -83.55 <= lon <= -78.75
+
+
+def in_america_box(lat, lon):
+    # US Lake America (Ontario): Fort Niagara to Tibbetts Point.
+    return 43.15 <= lat <= 44.40 and -79.90 <= lon <= -76.15
+
+
+def in_superior_box(lat, lon):
+    # Whitefish Point to Duluth, Isle Royale, and the Ontario north shore.
+    # East of -84.48 is St. Marys River; south of 46.40 is the Straits.
+    return 46.40 <= lat <= 49.05 and -92.35 <= lon <= -84.48
+
+
 def region(lat, lon):
     # Door County juts east of the rest of the Wisconsin shore, so a single
     # longitude cutoff puts Sturgeon Bay Canal, Baileys Harbor, Cana Island,
     # and Death's Door on the Michigan chip. Keep the peninsula and islands
     # on the Wisconsin side; Minneapolis Shoal / Escanaba stay Michigan.
+    if in_superior_box(lat, lon):
+        return "Lake Superior"
     if 44.55 <= lat < 45.50 and lon <= -86.80:
         if lon <= -87.55:
             return "Green Bay"
         return "Wisconsin / Illinois"
     if lon <= -87.55 and lat >= 44.4:
         return "Green Bay"
+    if in_america_box(lat, lon):
+        return "Lake America"
+    if in_erie_box(lat, lon):
+        return "Lake Erie"
     if lat >= 45.65 and lon >= -85.7:
         return "Straits / North"
+    if in_huron_box(lat, lon) or lon > -84.55:
+        return "Lake Huron"
     if lon <= -87.35:
         return "Wisconsin / Illinois"
     if lat < 41.85:
@@ -161,8 +207,8 @@ def assign_metars(items, stations):
 def write_catalog(items):
     out = {
         "version": 2,
-        "area": "Lake Michigan and adjoining waters (Green Bay, Straits approaches)",
-        "notes": "Search catalog in the app, then add lights to your LED list. Includes named lighthouses plus USCG green and red lights and lighted buoys on Lake Michigan and Green Bay. Each entry has the nearest METAR station. Not all entries are on the strip.",
+        "area": "The Great Lakes (US and Canada)",
+        "notes": "Search catalog in the app, then add lights to your LED list. Includes named lighthouses plus US and Canadian lights and lighted buoys on all five Great Lakes. Each entry has the nearest METAR station. Not all entries are on the strip.",
         "count": len(items),
         "lighthouses": items,
     }
@@ -183,7 +229,7 @@ def main():
         if not m:
             continue
         lon, lat = float(m.group(1)), float(m.group(2))
-        if not (41.55 <= lat <= 46.15 and -88.25 <= lon <= -84.55):
+        if not in_catalog_box(lat, lon):
             continue
         name = r.get("itemLabel", {}).get("value", "").strip()
         if not name or name.startswith("Q"):

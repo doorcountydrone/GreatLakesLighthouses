@@ -125,12 +125,12 @@ fun ChartScreen(
         val led = light.led
         val label = light.shortName.ifBlank { light.name }
         identifying = true
-        statusMessage = "Identifying LED ${light.displayLed} ($label) on the Pico…"
+        statusMessage = "Identifying LED ${light.displayLed} ($label) on the chart…"
         scope.launch {
             statusMessage = when (val result = picoApi.identify(PicoUrls.normalize(picoBaseUrl), led)) {
                 is PicoLighthousesApi.IdentifyResult.Success -> {
                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
-                    "LED ${result.led + 1} only on the Pico for ${result.ms / 1000} seconds."
+                    "LED ${result.led + 1} only on the chart for ${result.ms / 1000} seconds."
                 }
                 is PicoLighthousesApi.IdentifyResult.Error ->
                     "Identify failed: ${result.message}"
@@ -146,7 +146,7 @@ fun ChartScreen(
         }
         pendingSelectId = entry.id
         catalogPick = null
-        statusMessage = "Added to your list. Drag on Lights for strip order, then Save to Pico."
+        statusMessage = "Added to your list. Drag on Lights for strip order, then Save to chart."
         onLightsChange(lights + CatalogRepository.toLighthouse(entry), true)
     }
 
@@ -377,7 +377,7 @@ private fun CatalogInfoCard(
                 color = Fog,
             )
             Text(
-                text = "Adds as LED $nextLed. Drag on Lights to match the strip, then Save to Pico.",
+                text = "Adds as LED $nextLed. Drag on Lights to match the strip, then Save to chart.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Fog,
             )

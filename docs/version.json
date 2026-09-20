@@ -1,5 +1,5 @@
 {
-  "version": "0.6.36",
+  "version": "0.6.43",
   "files": [
     {
       "name": "main.py",
@@ -8,6 +8,14 @@
     {
       "name": "wifi_manager.py",
       "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/wifi_manager.py"
+    },
+    {
+      "name": "netreq.py",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/netreq.py"
+    },
+    {
+      "name": "led_matrix.py",
+      "url": "https://raw.githubusercontent.com/doorcountydrone/GreatLakesLighthouses/main/pico/led_matrix.py"
     },
     {
       "name": "updater.py",

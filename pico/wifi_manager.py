@@ -16,6 +16,7 @@ DEFAULT_NUM_LEDS = 13
 DEFAULT_DISPLAY_TYPE = "NONE"
 DEFAULT_MATRIX_SCROLL = "WEATHER"
 DEFAULT_MATRIX_SCROLL_SPEED = 7
+DEFAULT_SCROLL_TIMES = 1
 DEFAULT_LIGHT_SHOW = "TOUR"
 DEFAULT_TOUR_FLASH_S = 180
 DEFAULT_TOUR_STEP_S = 10
@@ -46,11 +47,11 @@ DEFAULT_SLEEP = {
     "weekend_on_minute": 0,
 }
 
-WEEKDAYS = ("Mondwqay", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 DISPLAY_TYPES = (
     ("NONE", "LED strip only"),
-    ("OLED", "OLED (128x64)"),
-    ("LED_MATRIX", "LED matrix (8x32)"),
+    ("OLED", "OLED (128×64)"),
+    ("LED_MATRIX", "LED matrix (8×32)"),
 )
 MATRIX_SCROLL_TYPES = (
     ("WEATHER", "Weather only"),
@@ -61,18 +62,18 @@ LIGHT_SHOW_TYPES = (
     ("TOUR", "Populate one by one"),
 )
 GPIO_NOTES = {
-    0: " (default)",
-    1: " (LED matrix)",
-    15: " (setup button)",
-    16: " (OLED SDA)",
-    17: " (OLED SCL)",
-    18: " (OLED 3.3V)",
-    19: " (OLED GND)",
-    23: " (internal)",
-    24: " (internal)",
-    25: " (internal)",
-    21: " (LDR drive)",
-    26: " (LDR ADC)",
+    0: "default strip",
+    1: "LED matrix",
+    15: "setup button",
+    16: "OLED SDA",
+    17: "OLED SCL",
+    18: "OLED 3.3V",
+    19: "OLED GND",
+    21: "LDR drive",
+    23: "internal",
+    24: "internal",
+    25: "internal",
+    26: "LDR",
 }
 
 led = None
@@ -475,6 +476,7 @@ def apply_fields(cfg, src):
         ("tour_flash_s", 10, 1800),
         ("tour_step_s", 2, 120),
         ("matrix_scroll_speed", 1, 10),
+        ("scroll_times", 1, 10),
         ("weekend_off_weekday", 0, 6),
         ("weekend_off_hour", 0, 23),
         ("weekend_off_minute", 0, 59),
@@ -519,7 +521,9 @@ def gpio_options(selected):
     sel = _clamp(int(selected), 0, 28)
     for n in range(29):
         mark = " selected" if n == sel else ""
-        parts.append('<option value="%d"%s>GPIO %d%s</option>' % (n, mark, n, GPIO_NOTES.get(n, "")))
+        note = GPIO_NOTES.get(n)
+        label = ("GPIO %d — %s" % (n, note)) if note else ("GPIO %d" % n)
+        parts.append('<option value="%d"%s>%s</option>' % (n, mark, label))
     return "".join(parts)
 
 
@@ -541,6 +545,7 @@ def merge_defaults(cfg):
         "display_type": DEFAULT_DISPLAY_TYPE,
         "matrix_scroll": DEFAULT_MATRIX_SCROLL,
         "matrix_scroll_speed": DEFAULT_MATRIX_SCROLL_SPEED,
+        "scroll_times": DEFAULT_SCROLL_TIMES,
         "light_show": DEFAULT_LIGHT_SHOW,
         "tour_flash_s": DEFAULT_TOUR_FLASH_S,
         "tour_step_s": DEFAULT_TOUR_STEP_S,
@@ -565,6 +570,10 @@ def merge_defaults(cfg):
         out["matrix_scroll_speed"] = _clamp(int(out.get("matrix_scroll_speed", DEFAULT_MATRIX_SCROLL_SPEED)), 1, 10)
     except Exception:
         out["matrix_scroll_speed"] = DEFAULT_MATRIX_SCROLL_SPEED
+    try:
+        out["scroll_times"] = _clamp(int(out.get("scroll_times", DEFAULT_SCROLL_TIMES)), 1, 10)
+    except Exception:
+        out["scroll_times"] = DEFAULT_SCROLL_TIMES
     try:
         out["tour_flash_s"] = _clamp(int(out.get("tour_flash_s", DEFAULT_TOUR_FLASH_S)), 10, 1800)
     except Exception:
@@ -652,7 +661,7 @@ def send_static_file(conn, path, content_type, missing=""):
                     break
                 _send_all(conn, chunk)
     except Exception:
-        send(conn, "200 OK", content_type, missing or "<p>Copy help.html to the Pico.</p>")
+        send(conn, "200 OK", content_type, missing or "<p>Copy help.html to the chart.</p>")
 
 
 def send_html(conn, page):
@@ -724,10 +733,10 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 #panelSettings,#panelHelp{display:none}
 </style></head><body>
 <h1>Great Lakes Lighthouses</h1>
-<p>Open this page on the Pico (setup: 192.168.4.1, or the Pico LAN IP).</p>
+<p>Open this page on the chart (setup: 192.168.4.1, or the chart LAN IP).</p>
 <div class="tabs">
 <button type="button" id="tabLights" onclick="showTab('lights')">Lighthouses</button>
-<button type="button" id="tabSettings" onclick="showTab('settings')">Pico settings</button>
+<button type="button" id="tabSettings" onclick="showTab('settings')">Chart settings</button>
 <button type="button" id="tabHelp" onclick="showTab('help')">Help</button>
 </div>
 <div id="panelLights">
@@ -748,14 +757,14 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <div id="panelSettings">
 <form action="/configure" method="post">
 <h2>Home Wi-Fi</h2>
-<label>Network name (SSID)</label>
-<input name="ssid" value="__SSID__" placeholder="Your router name" autocomplete="off">
+<label>SSID</label>
+<input name="ssid" value="__SSID__" placeholder="Home or hotel Wi-Fi name" autocomplete="off">
 <label>Password</label>
 <input name="password" type="password" value="" placeholder="Leave blank to keep the current password" autocomplete="off">
-<p class="note">SSID and password are for the Pico to join your router, not for the GreatLakes-Setup network.</p>
+<p class="note">This is the router the chart joins for internet — not GreatLakes-Setup. Leave password blank to keep the one already saved.</p>
 <label>Light show</label>
 <select name="light_show">__SHOW_OPTS__</select>
-<p class="note">Keep flashing leaves every light on its real characteristic. One by one goes dark, then lights each lighthouse in list order with the name on OLED or matrix.</p>
+<p class="note">Keep flashing leaves every light on its real characteristic. Populate one by one goes dark, then lights each lighthouse in list order with the name on OLED or matrix.</p>
 <div class="row">
 <div><label>All lights flash (seconds)</label><input name="tour_flash_s" type="number" min="10" max="1800" value="__TOUR_FLASH__"></div>
 <div><label>Each light (seconds)</label><input name="tour_step_s" type="number" min="2" max="120" value="__TOUR_STEP__"></div>
@@ -763,13 +772,16 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <p class="note">Used when Light show is Populate one by one. 180 is 3 minutes of all lights flashing. 10 is 10 seconds per light on OLED or matrix.</p>
 <label>Extra display</label>
 <select name="display_type">__DISPLAY_OPTS__</select>
-<p class="note">LED strip is always on. Add an OLED (GPIO 16-19) or an 8x32 matrix (GPIO 1), or leave strip only.</p>
+<p class="note">Lighthouse strip is always on. OLED uses GPIO 16–19. Matrix uses GPIO 1 and 5 V.</p>
 <label>LED matrix scroll</label>
 <select name="matrix_scroll">__SCROLL_OPTS__</select>
-<p class="note">Used when Extra display is LED matrix. IP scrolls once at startup. Weather only lists lights with rain, fog, snow, or lightning. If none, GREAT LAKES LIGHTHOUSES scrolls about every 15 seconds.</p>
+<p class="note">IP once at startup. Weather only lists lights with rain/fog/snow/lightning. If none, GREAT LAKES LIGHTHOUSES every 15 seconds.</p>
 <label>Matrix scroll speed <span id="spdN">__SCROLL_SPD__</span></label>
 <input name="matrix_scroll_speed" type="range" min="1" max="10" value="__SCROLL_SPD__" oninput="document.getElementById('spdN').textContent=this.value">
-<p class="note">1 is slow, 10 is fast. 7 matches the original speed.</p>
+<p class="note">1 is slow, 10 is fast. 7 matches the original speed. Text enters from the right.</p>
+<label>Scroll times <span id="timesN">__SCROLL_TIMES__</span></label>
+<input name="scroll_times" type="range" min="1" max="10" value="__SCROLL_TIMES__" oninput="document.getElementById('timesN').textContent=this.value">
+<p class="note">How many times each message scrolls across the OLED or matrix. 1 is once, then it waits until the text changes.</p>
 <div class="row">
 <div><label>LED count</label><input name="num_leds" type="number" min="1" max="300" value="__NUM_LEDS__"></div>
 <div><label>Strip data pin</label><select name="led_pin">__GPIO_OPTS__</select></div>
@@ -778,14 +790,15 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <div><label>Min brightness (0-30)</label><input name="min_brightness" type="number" min="0" max="30" value="__MINB__"></div>
 <div><label>Max brightness (1-30)</label><input name="max_brightness" type="number" min="1" max="30" value="__MAXB__"></div>
 </div>
-<p class="note">Max 30 is plenty for a wall chart. Min 2 keeps WS2812 colors correct in the dark.</p>
+<p class="note">Max is the bright-room ceiling (1 to 30). Min is the dark-room floor (0 = off, 1–2 is a faint glow).</p>
 <label>Refresh seconds</label>
 <input name="cycle_delay" type="number" min="30" max="3600" value="__CYCLE__">
 <label><input name="beacon_pulse" type="checkbox" value="1" __BEACON__ style="width:auto"> Beacon pulse on clear weather</label>
 <h2>Sleep schedule</h2>
-<label>Timezone offset from UTC (Central: -6 standard, -5 daylight)</label>
+<label>Time offset (hours from UTC)</label>
+<p class="note">Central: -6 standard, -5 daylight. Eastern: -5 / -4. The chart sets its clock after it joins Wi-Fi.</p>
 <input name="timezone_offset_hours" type="number" min="-12" max="14" value="__TZ__">
-<label><input name="sleep_enabled" type="checkbox" value="1" __SLEEP__ style="width:auto"> Turn LEDs off every night</label>
+<label><input name="sleep_enabled" type="checkbox" value="1" __SLEEP__ style="width:auto"> Turn LEDs off at set times</label>
 <div class="row">
 <div><label>Off hour</label><input name="sleep_at_hour" type="number" min="0" max="23" value="__SH__"></div>
 <div><label>Off minute</label><input name="sleep_at_minute" type="number" min="0" max="59" value="__SM__"></div>
@@ -921,7 +934,7 @@ function restoreDefaults(){
  say('Restoring Kewaunee to Rock Island list...');
  getJson('/lighthouses-defaults',function(data){
   var next=items(data);
-  if(!next.length){say('Copy lighthouses_defaults.json to the Pico for restore.'); return;}
+  if(!next.length){say('Copy lighthouses_defaults.json to the chart for restore.'); return;}
   lights=next; render(); say('Restored '+lights.length+' lights. Save list to apply.');
  });
 }
@@ -933,20 +946,34 @@ function onMap(entry){
  });
 }
 function openCatalog(){
- document.getElementById('modalBox').innerHTML='<h2>Lake Michigan catalog</h2><p class="note">Loading...</p>';
+ document.getElementById('modalBox').innerHTML='<h2>Great Lakes catalog</h2><p class="note">Loading...</p>';
  document.getElementById('overlay').style.display='block';
- var SHORES=[['Chicago','Indiana / Chicago'],['Wisconsin','Wisconsin / Illinois'],['Green Bay','Green Bay'],['Michigan','Michigan'],['Straits','Straits / North']];
+ var SHORES=[['Chicago','Indiana / Chicago'],['Wisconsin','Wisconsin / Illinois'],['Green Bay','Green Bay'],['Michigan','Michigan'],['Huron','Lake Huron'],['Huron ON','Canada Huron'],['Georgian','Georgian Bay'],['Channel','North Channel'],['Erie','Lake Erie'],['Erie ON','Canada Erie'],['America','Lake America'],['Ontario ON','Canada Ontario'],['Straits','Straits / North'],['Superior','Lake Superior'],['Superior ON','Canada Superior']];
  function isBuoy(e){
   return ((e.name||'')+' '+(e.short_name||'')).toLowerCase().indexOf('buoy')>=0;
+ }
+ var numberedAid=/(?:\blight\s+\d+|\bpier\s+no\.?\s*\d+|\s+\d+[a-z]?$)/i;
+ var utilityWords=['marina','bulkhead','abutment','disposal','guidewall','yacht','street','park','jetty','basin','crib','breakwater','shoal','ice boom','dock','academy','club'];
+ function isLighthouse(e){
+  if(isBuoy(e)) return false;
+  var name=String(e.name||'').trim();
+  var short=String(e.short_name||'').trim();
+  if(numberedAid.test(name)||numberedAid.test(short)) return false;
+  var n=(name+' '+short).toLowerCase();
+  for(var u=0;u<utilityWords.length;u++){ if(n.indexOf(utilityWords[u])>=0) return false; }
+  return true;
+ }
+ function isOtherLight(e){ return !isBuoy(e) && !isLighthouse(e); }
+ function matchesKind(e){
+  if(!catKind||catKind==='*') return true;
+  if(catKind==='buoys') return isBuoy(e);
+  if(catKind==='marks') return isOtherLight(e);
+  return isLighthouse(e);
  }
  function paint(q){
   catQuery=q||'';
   q=catQuery.toLowerCase();
-  var pool=(catalog||[]).filter(function(e){
-   if(!catKind||catKind==='*') return true;
-   var b=isBuoy(e);
-   return catKind==='buoys'?b:!b;
-  });
+  var pool=(catalog||[]).filter(matchesKind);
   function norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/^\s+|\s+$/g,'');}
   function words(s){return norm(s).split(' ').filter(function(w){return w;});}
   var skip={the:1,of:1,and:1,a:1,to:1,light:1,lights:1,lighthouse:1,lighthouses:1,lt:1};
@@ -975,11 +1002,13 @@ function openCatalog(){
    return toks.every(function(t){return hitWord(t,hw,hay);});
   });
   var show=q||catShore||catKind;
-  var nLights=(catalog||[]).filter(function(e){return !isBuoy(e);}).length;
+  var nTowers=(catalog||[]).filter(isLighthouse).length;
+  var nMarks=(catalog||[]).filter(isOtherLight).length;
   var nBuoys=(catalog||[]).filter(isBuoy).length;
-  var html='<h2>Lake Michigan catalog</h2><div id="catKinds">';
+  var html='<h2>Great Lakes catalog</h2><div id="catKinds">';
   html+='<button type="button" class="chip'+(catKind==='*'?' on':'')+'" data-k="*">All '+(catalog||[]).length+'</button>';
-  html+='<button type="button" class="chip'+(catKind==='lights'?' on':'')+'" data-k="lights">Lighthouses '+nLights+'</button>';
+  html+='<button type="button" class="chip'+(catKind==='lights'?' on':'')+'" data-k="lights">Lighthouses '+nTowers+'</button>';
+  html+='<button type="button" class="chip'+(catKind==='marks'?' on':'')+'" data-k="marks">Lights '+nMarks+'</button>';
   html+='<button type="button" class="chip'+(catKind==='buoys'?' on':'')+'" data-k="buoys">Buoys '+nBuoys+'</button>';
   html+='</div><div id="catChips">';
   html+='<button type="button" class="chip'+(catShore==='*'?' on':'')+'" data-r="*">All '+pool.length+'</button>';
@@ -990,7 +1019,7 @@ function openCatalog(){
   });
   html+='</div><label>Search</label><input id="catQ" value="'+esc(catQuery)+'" placeholder="Grand Haven, St. Joseph, Point Betsie">';
   if(!show){
-   html+='<p class="note">Pick Lighthouses or Buoys, then a shore — or search. Pierheads and ranges are with Lighthouses.</p>';
+   html+='<p class="note">Pick Lighthouses, Lights, or Buoys, then a shore — or search. Named towers are Lighthouses; numbered marks and marinas are Lights.</p>';
   }else{
    html+='<p class="note">'+hits.length+(catShore&&catShore!=='*'?' on this shore':' of '+pool.length)+'</p><div id="catList">';
    hits.forEach(function(e,idx){
@@ -1027,9 +1056,9 @@ function openCatalog(){
  if(catalog){paint(catQuery); return;}
  getJson('/catalog',function(data){
   catalog=items(data);
-  if(!catalog.length){document.getElementById('modalBox').innerHTML='<h2>Catalog</h2><p class="note">Copy catalog.json to the Pico (same folder as main.py), then reload.</p><button type="button" onclick="closeModal()">Close</button>'; return;}
+  if(!catalog.length){document.getElementById('modalBox').innerHTML='<h2>Catalog</h2><p class="note">Copy catalog.json to the chart (same folder as main.py), then reload.</p><button type="button" onclick="closeModal()">Close</button>'; return;}
   paint('');
- }, function(){document.getElementById('modalBox').innerHTML='<h2>Catalog</h2><p class="note">Copy catalog.json to the Pico, then reload this page.</p><button type="button" onclick="closeModal()">Close</button>';});
+ }, function(){document.getElementById('modalBox').innerHTML='<h2>Catalog</h2><p class="note">Copy catalog.json to the chart, then reload this page.</p><button type="button" onclick="closeModal()">Close</button>';});
 }
 function addCatalog(e){
  if(!e||onMap(e)) return;
@@ -1066,6 +1095,7 @@ say('Loaded '+lights.length+' lights');
     page = page.replace("__TOUR_STEP__", _html_attr(cfg.get("tour_step_s", DEFAULT_TOUR_STEP_S)))
     page = page.replace("__SCROLL_OPTS__", matrix_scroll_options(cfg.get("matrix_scroll", DEFAULT_MATRIX_SCROLL)))
     page = page.replace("__SCROLL_SPD__", _html_attr(cfg.get("matrix_scroll_speed", DEFAULT_MATRIX_SCROLL_SPEED)))
+    page = page.replace("__SCROLL_TIMES__", _html_attr(cfg.get("scroll_times", DEFAULT_SCROLL_TIMES)))
     max_b = cfg.get("max_brightness")
     if max_b is None:
         max_b = int(round(float(cfg.get("brightness", DEFAULT_BRIGHTNESS)) * 255))
@@ -1118,13 +1148,13 @@ say('Loaded '+lights.length+' lights');
 
 
 def success_page(ok, ip):
-    ip_line = ("LAN IP: <b>%s</b> — save this for the Android app later." % ip) if ip else "Wi-Fi test failed. The Pico will retry on reboot."
+    ip_line = ("LAN IP: <b>%s</b> — save this for the Android app later." % ip) if ip else "Wi-Fi test failed. The chart will retry on reboot."
     return """<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Saved</title></head>
 <body style="font-family:Arial;background:#0B1F3A;color:#F4EBD0;padding:24px">
 <h1 style="color:#E8A838">%s</h1>
 <p>%s</p>
-<p>Reconnect your phone to home Wi-Fi after the Pico reboots.</p>
+<p>Reconnect your phone to home Wi-Fi after the chart reboots.</p>
 </body></html>""" % ("Saved" if ok else "Saved (check Wi-Fi)", ip_line)
 
 
@@ -1272,7 +1302,7 @@ def run_server(force_ap=False):
                     conn,
                     "help.html",
                     "text/html; charset=utf-8",
-                    "<p>Copy help.html to the Pico, then reload.</p>",
+                    "<p>Copy help.html to the chart, then reload.</p>",
                 )
             elif first.startswith("GET /catalog"):
                 send_json_file(conn, "catalog.json", {"ok": False, "lighthouses": []})
@@ -1415,4 +1445,3 @@ def start(force_ap=False):
     init_ldr()
     paint_status((40, 30, 0))
     run_server(force_ap=force_ap)
--

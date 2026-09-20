@@ -6,6 +6,9 @@ const val CYCLE_DELAY_MAX = 3600
 const val MATRIX_SCROLL_SPEED_MIN = 1
 const val MATRIX_SCROLL_SPEED_MAX = 10
 const val MATRIX_SCROLL_SPEED_DEFAULT = 7
+const val SCROLL_TIMES_MIN = 1
+const val SCROLL_TIMES_MAX = 10
+const val SCROLL_TIMES_DEFAULT = 1
 const val TOUR_FLASH_S_MIN = 10
 const val TOUR_FLASH_S_MAX = 1800
 const val TOUR_FLASH_S_DEFAULT = 180
@@ -41,9 +44,11 @@ data class PicoConfig(
     val displayType: String = "NONE",
     val matrixScroll: String = "WEATHER",
     val matrixScrollSpeed: Int = MATRIX_SCROLL_SPEED_DEFAULT,
+    val scrollTimes: Int = SCROLL_TIMES_DEFAULT,
     val lightShow: String = "TOUR",
     val tourFlashS: Int = TOUR_FLASH_S_DEFAULT,
     val tourStepS: Int = TOUR_STEP_S_DEFAULT,
+    val beaconPulse: Boolean = true,
 )
 
 data class GpioChoice(val pin: Int, val label: String)
@@ -57,6 +62,7 @@ val GPIO_CHOICES: List<GpioChoice> = (0..28).map { pin ->
         17 -> "OLED SCL"
         18 -> "OLED 3.3V"
         19 -> "OLED GND"
+        21 -> "LDR drive"
         23, 24, 25 -> "internal"
         26 -> "LDR"
         else -> null
