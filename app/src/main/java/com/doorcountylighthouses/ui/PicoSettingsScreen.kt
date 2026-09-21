@@ -280,6 +280,7 @@ fun PicoSettingsScreen(
             style = MaterialTheme.typography.headlineSmall,
             color = Amber,
         )
+        rememberAppUpdate()?.let { AppUpdateBanner(it) }
         Text(
             text = when {
                 firmwareVersion == null -> "Chart firmware: Fetch to load"

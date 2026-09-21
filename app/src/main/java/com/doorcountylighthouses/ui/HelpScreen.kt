@@ -51,6 +51,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             color = Amber,
             fontWeight = FontWeight.SemiBold,
         )
+        rememberAppUpdate()?.let { AppUpdateBanner(it) }
         Text(
             text = "Chart firmware is on the Settings tab after Fetch — not here.",
             style = MaterialTheme.typography.bodyMedium,
@@ -163,6 +164,11 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 "• Weekend / long off is an extra off stretch, for example Friday evening to Monday morning. It works together with nightly sleep.\n\n" +
                 "• Save writes the settings. Save & reboot is the sure way after you change Wi-Fi.\n\n" +
                 "In the browser, Chart settings always uses Save & Reboot.",
+        )
+
+        HelpCard(
+            title = "App updates",
+            body = "The phone app checks GitHub for a newer APK. If one is waiting, Help and Settings show App update available. Tap it to download. This is separate from chart firmware.",
         )
 
         HelpCard(
