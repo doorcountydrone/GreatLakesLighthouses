@@ -52,6 +52,7 @@ object LighthouseRepository {
 
     fun fromJson(obj: JSONObject): Lighthouse {
         val light = obj.optJSONObject("light")
+        val lightB = obj.optJSONObject("light_b")
         val doubles: (JSONArray?) -> List<Double> = { arr ->
             if (arr == null) emptyList()
             else buildList(arr.length()) {
@@ -81,6 +82,11 @@ object LighthouseRepository {
             periodS = period,
             onS = onS,
             offS = offS,
+            characteristicB = lightB?.optString("char").orEmpty(),
+            lightColorB = lightB?.optString("color").orEmpty(),
+            periodSB = lightB?.optDouble("period_s", 1.0) ?: 1.0,
+            onSB = doubles(lightB?.optJSONArray("on_s")).ifEmpty { listOf(1.0) },
+            offSB = doubles(lightB?.optJSONArray("off_s")).ifEmpty { listOf(0.0) },
         )
     }
 
@@ -91,7 +97,7 @@ object LighthouseRepository {
             .put("period_s", light.periodS)
             .put("on_s", JSONArray(light.onS))
             .put("off_s", JSONArray(light.offS))
-        return JSONObject()
+        val obj = JSONObject()
             .put("id", light.id)
             .put("name", light.name)
             .put("short_name", light.shortName)
@@ -105,6 +111,18 @@ object LighthouseRepository {
             .put("active", light.active)
             .put("skip", light.skip)
             .put("light", pattern)
+        if (light.characteristicB.isNotBlank() || light.lightColorB.isNotBlank()) {
+            obj.put(
+                "light_b",
+                JSONObject()
+                    .put("char", light.characteristicB)
+                    .put("color", light.lightColorB.ifBlank { "W" })
+                    .put("period_s", light.periodSB)
+                    .put("on_s", JSONArray(light.onSB))
+                    .put("off_s", JSONArray(light.offSB)),
+            )
+        }
+        return obj
     }
 
     fun newLight(name: String, preset: LightPreset, metar: String = ""): Lighthouse {

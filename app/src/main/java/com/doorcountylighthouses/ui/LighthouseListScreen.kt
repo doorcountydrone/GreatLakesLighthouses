@@ -344,10 +344,25 @@ private fun EditorCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(ledSwatch(light.lightColor).copy(alpha = 0.22f))
                     .clickable(onClick = onIdentify),
                 contentAlignment = Alignment.Center,
             ) {
+                Row(modifier = Modifier.matchParentSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .background(ledSwatch(light.lightColor).copy(alpha = 0.22f)),
+                    )
+                    if (light.lightColorB.isNotBlank() && light.lightColorB != light.lightColor) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .background(ledSwatch(light.lightColorB).copy(alpha = 0.22f)),
+                        )
+                    }
+                }
                 Text(
                     text = light.displayLed.toString(),
                     style = MaterialTheme.typography.titleMedium,
@@ -361,9 +376,14 @@ private fun EditorCard(
                     color = if (light.skip) Fog else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = light.characteristic.ifBlank { "—" },
+                    text = light.displayCharacteristic.ifBlank { "—" },
                     style = MaterialTheme.typography.bodySmall,
                     color = Amber,
+                )
+                Text(
+                    text = light.ledPlayHint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Fog,
                 )
                 if (light.metar.isNotBlank()) {
                     Text(
@@ -544,7 +564,7 @@ private fun CatalogPickerDialog(
                                     Text(text = entry.name, style = MaterialTheme.typography.titleSmall)
                                     Text(
                                         text = buildString {
-                                            append(entry.characteristic)
+                                            append(entry.displayCharacteristic)
                                             append(" · ")
                                             append(entry.region)
                                             if (entry.metar.isNotBlank()) {
@@ -554,6 +574,11 @@ private fun CatalogPickerDialog(
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (onMap) Fog else Amber,
+                                    )
+                                    Text(
+                                        text = entry.ledPlayHint,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Fog,
                                     )
                                     if (onMap) {
                                         Text(

@@ -18,9 +18,27 @@ data class Lighthouse(
     val periodS: Double = 1.0,
     val onS: List<Double> = listOf(1.0),
     val offS: List<Double> = listOf(0.0),
+    val characteristicB: String = "",
+    val lightColorB: String = "",
+    val periodSB: Double = 1.0,
+    val onSB: List<Double> = listOf(1.0),
+    val offSB: List<Double> = listOf(0.0),
 ) {
     val hasCoordinates: Boolean
         get() = lat != 0.0 || lon != 0.0
+
+    val displayCharacteristic: String
+        get() = when {
+            characteristicB.isBlank() -> characteristic
+            characteristic.isBlank() -> characteristicB
+            else -> "$characteristic / $characteristicB"
+        }
+
+    val ledPlayHint: String
+        get() = describeLedPlay(
+            lightColor, periodS, onS, offS,
+            lightColorB, periodSB, onSB, offSB, characteristicB,
+        )
 
     /** Number on the strip and in the UI. First light is 1. [led] is 0-based on the wire. */
     val displayLed: Int

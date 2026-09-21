@@ -33,7 +33,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.43"
+FIRMWARE_VERSION = "0.6.46"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -158,6 +158,16 @@ strip = None
 wlan = None
 http_sock = None
 http_sock_8080 = None
+_wifi_ssid = ""
+_wifi_password = ""
+_wifi_next_try = 0
+_wifi_connecting = False
+_wifi_connect_start = 0
+_wifi_fail_streak = 0
+_wifi_just_up = False
+_wifi_was_up = False
+WIFI_GIVE_MS = 10000
+WIFI_RETRY_MS = 12000
 status = {
     "version": FIRMWARE_VERSION,
     "ip": None,
@@ -292,6 +302,7 @@ def load_config():
         _ldr_last_ms = 0
         _adc_lo = LDR_ADC_LO
         _adc_hi = LDR_ADC_HI
+    _remember_wifi(cfg)
     return cfg
 
 
@@ -323,8 +334,21 @@ def request_force_ap_reboot():
     machine.reset()
 
 
+def _remember_wifi(cfg):
+    global _wifi_ssid, _wifi_password
+    ssid = cfg.get("ssid")
+    if ssid:
+        _wifi_ssid = ssid
+        pw = cfg.get("password")
+        if pw:
+            _wifi_password = pw
+        elif pw == "":
+            _wifi_password = ""
+
+
 def connect_wifi(cfg):
-    global wlan
+    global wlan, _wifi_was_up
+    _remember_wifi(cfg)
     ssid = cfg.get("ssid")
     password = cfg.get("password")
     if not ssid:
@@ -364,11 +388,111 @@ def connect_wifi(cfg):
                     print("IPv6", wlan.ipconfig("addr6"))
                 except Exception:
                     pass
+                _wifi_was_up = True
                 return True
         except OSError as e:
             print("WiFi retry", attempt + 1, e)
             time.sleep_ms(500)
     return False
+
+
+def _wifi_apply_up(recovered):
+    global _wifi_connecting, _wifi_fail_streak, _wifi_just_up, _wifi_was_up, _wifi_next_try
+    _wifi_connecting = False
+    _wifi_fail_streak = 0
+    _wifi_next_try = 0
+    _wifi_was_up = True
+    try:
+        wlan.ipconfig(dhcp6=True)
+    except Exception:
+        pass
+    try:
+        ip = wlan.ifconfig()[0]
+    except Exception:
+        ip = None
+    old = status.get("ip")
+    status["ip"] = ip
+    if ip and ip != old:
+        print("WiFi", ip)
+        try:
+            print("IPv6", wlan.ipconfig("addr6"))
+        except Exception:
+            pass
+        restart_http()
+    if recovered:
+        _wifi_just_up = True
+
+
+def _wifi_begin_connect():
+    global wlan, _wifi_connecting, _wifi_connect_start, _wifi_fail_streak, _wifi_next_try
+    if not _wifi_ssid:
+        return
+    if wlan is None:
+        wlan = network.WLAN(network.STA_IF)
+    try:
+        if _wifi_fail_streak and _wifi_fail_streak % 3 == 0:
+            try:
+                wlan.active(False)
+            except Exception:
+                pass
+            time.sleep_ms(250)
+        if not wlan.active():
+            wlan.active(True)
+            time.sleep_ms(200)
+        try:
+            wlan.disconnect()
+        except Exception:
+            pass
+        time.sleep_ms(50)
+        wlan.connect(_wifi_ssid, _wifi_password or "")
+        _wifi_connecting = True
+        _wifi_connect_start = time.ticks_ms()
+        print("WiFi reconnecting...")
+    except OSError as e:
+        print("WiFi reconnect", e)
+        _wifi_fail_streak += 1
+        _wifi_connecting = False
+        _wifi_next_try = time.ticks_add(time.ticks_ms(), WIFI_RETRY_MS)
+
+
+def wifi_keep():
+    global _wifi_connecting, _wifi_fail_streak, _wifi_next_try, _wifi_was_up
+    if not _wifi_ssid or wlan is None:
+        return
+    now = time.ticks_ms()
+    try:
+        up = wlan.isconnected()
+    except Exception:
+        up = False
+    if up:
+        recovered = (not _wifi_was_up) or (not status.get("ip"))
+        if recovered or _wifi_connecting:
+            _wifi_apply_up(recovered)
+        else:
+            try:
+                ip = wlan.ifconfig()[0]
+            except Exception:
+                ip = None
+            if ip and ip != status.get("ip"):
+                _wifi_apply_up(False)
+        return
+    if status.get("ip") or _wifi_was_up:
+        print("WiFi lost — retrying")
+        status["ip"] = None
+        _wifi_was_up = False
+        _wifi_connecting = False
+        _wifi_next_try = 0
+    if _wifi_connecting:
+        if time.ticks_diff(now, _wifi_connect_start) < WIFI_GIVE_MS:
+            return
+        _wifi_connecting = False
+        _wifi_fail_streak += 1
+        _wifi_next_try = time.ticks_add(now, WIFI_RETRY_MS)
+        print("WiFi retry later")
+        return
+    if _wifi_next_try and time.ticks_diff(_wifi_next_try, now) > 0:
+        return
+    _wifi_begin_connect()
 
 
 def load_lighthouses():
@@ -878,9 +1002,21 @@ def sync_ntp():
         print("NTP failed:", e)
 
 
+def light_specs(lh):
+    out = []
+    for key in ("light", "light_b"):
+        spec = lh.get(key)
+        if isinstance(spec, dict):
+            out.append(spec)
+    extra = lh.get("lights")
+    if isinstance(extra, list) and not out:
+        out = [s for s in extra if isinstance(s, dict)]
+    return out
+
+
 def light_spec(lh):
-    spec = lh.get("light")
-    return spec if isinstance(spec, dict) else {}
+    specs = light_specs(lh)
+    return specs[0] if specs else {}
 
 
 def light_color(lh):
@@ -888,22 +1024,29 @@ def light_color(lh):
     return LIGHT_RGB.get(code, LIGHT_RGB["W"])
 
 
-def characteristic_on(lh, now_ms):
-    """True when this aid would be lit, using on_s/off_s pairs that fill period_s."""
-    spec = light_spec(lh)
+def spec_period_s(spec):
     if not spec:
-        return True
+        return 1.0
     on_s = spec.get("on_s") or [1.0]
     off_s = spec.get("off_s") or [0.0]
     period_s = float(spec.get("period_s") or 0)
     if period_s <= 0:
-        period_s = 0
         n = max(len(on_s), len(off_s))
         for i in range(n):
             period_s += float(on_s[i] if i < len(on_s) else 0)
             period_s += float(off_s[i] if i < len(off_s) else 0)
     if period_s <= 0:
+        period_s = 1.0
+    return period_s
+
+
+def spec_on(spec, now_ms):
+    """True when this aid would be lit, using on_s/off_s pairs that fill period_s."""
+    if not spec:
         return True
+    on_s = spec.get("on_s") or [1.0]
+    off_s = spec.get("off_s") or [0.0]
+    period_s = spec_period_s(spec)
     # Fixed light: no eclipse
     if len(off_s) == 1 and float(off_s[0]) <= 0 and len(on_s) == 1:
         return True
@@ -920,6 +1063,41 @@ def characteristic_on(lh, now_ms):
             return False
         cursor += off
     return False
+
+
+def characteristic_on(lh, now_ms):
+    return frame_color(lh, now_ms) is not None
+
+
+def frame_color(lh, now_ms):
+    specs = light_specs(lh)
+    if not specs:
+        return LIGHT_RGB["W"]
+    if len(specs) == 1:
+        spec = specs[0]
+        if spec_on(spec, now_ms):
+            code = str(spec.get("color", "W")).upper()
+            return LIGHT_RGB.get(code, LIGHT_RGB["W"])
+        return None
+    slices = []
+    for spec in specs:
+        ms = int(spec_period_s(spec) * 1000)
+        if ms < 200:
+            ms = 200
+        slices.append((spec, ms))
+    total = 0
+    for _spec, ms in slices:
+        total += ms
+    t = now_ms % total
+    acc = 0
+    for spec, ms in slices:
+        if t < acc + ms:
+            if spec_on(spec, t - acc):
+                code = str(spec.get("color", "W")).upper()
+                return LIGHT_RGB.get(code, LIGHT_RGB["W"])
+            return None
+        acc += ms
+    return None
 
 
 def start_identify(led_i, ms=8000):
@@ -949,7 +1127,10 @@ def paint_identify(led_i):
             if int(item.get("led", -1)) == led_i:
                 lh = item
                 break
-        color = light_color(lh) if lh else (255, 180, 60)
+        if lh:
+            color = frame_color(lh, time.ticks_ms()) or light_color(lh)
+        else:
+            color = (255, 180, 60)
         strip[led_i] = scale_color(color)
     strip.write()
 
@@ -1096,8 +1277,9 @@ def render_frame():
             strip[led_i] = (0, 0, 0)
             used[led_i] = True
             continue
-        if characteristic_on(lh, now_ms):
-            strip[led_i] = scale_color(light_color(lh))
+        color = frame_color(lh, now_ms)
+        if color:
+            strip[led_i] = scale_color(color)
         else:
             strip[led_i] = (0, 0, 0)
         used[led_i] = True
@@ -1956,13 +2138,23 @@ def main():
     check_for_ota()
     restart_http()
     print("Running")
-    global _tour_phase, _tour_until, _tour_step
+    global _tour_phase, _tour_until, _tour_step, _wifi_just_up
     _tour_phase = "normal"
     _tour_step = 0
     _tour_until = time.ticks_add(time.ticks_ms(), TOUR_NORMAL_MS)
     last_fetch = time.time()
     while True:
         try:
+            wifi_keep()
+            if _wifi_just_up:
+                _wifi_just_up = False
+                if not clock_trusted:
+                    sync_ntp()
+                if not in_sleep_window():
+                    fetch_metars()
+                    restart_http()
+                last_fetch = time.time()
+                gc.collect()
             handle_http()
             poll_ota_button()
             now = time.time()

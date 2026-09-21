@@ -295,9 +295,14 @@ private fun LightInfoCard(
                 }
             }
             Text(
-                text = light.characteristic.ifBlank { "—" },
+                text = light.displayCharacteristic.ifBlank { "—" },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Amber,
+            )
+            Text(
+                text = light.ledPlayHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = Fog,
             )
             Text(
                 text = buildString {
@@ -362,9 +367,14 @@ private fun CatalogInfoCard(
                 }
             }
             Text(
-                text = entry.characteristic.ifBlank { "—" },
+                text = entry.displayCharacteristic.ifBlank { "—" },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Amber,
+            )
+            Text(
+                text = entry.ledPlayHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = Fog,
             )
             Text(
                 text = buildString {
@@ -466,11 +476,14 @@ private fun LightMap(
                         Marker(
                             state = rememberMarkerState(position = LatLng(entry.lat, entry.lon)),
                             title = entry.shortName.ifBlank { entry.name },
-                            snippet = entry.characteristic,
+                            snippet = listOf(entry.displayCharacteristic, entry.ledPlayHint)
+                                .filter { it.isNotBlank() }
+                                .joinToString("  "),
                             icon = ghosts.iconFor(
                                 entry.lightColor,
                                 CatalogRepository.isBuoy(entry),
                                 CatalogRepository.isLighthouse(entry),
+                                entry.lightColorB,
                             ),
                             anchor = if (CatalogRepository.isLighthouse(entry)) {
                                 Offset(0.5f, 0.92f)
@@ -497,7 +510,7 @@ private fun LightMap(
                             title = light.shortName.ifBlank { light.name },
                             snippet = buildString {
                                 append("LED ${light.displayLed}")
-                                if (light.characteristic.isNotBlank()) append("  ${light.characteristic}")
+                                if (light.displayCharacteristic.isNotBlank()) append("  ${light.displayCharacteristic}")
                                 if (light.skip) append("  skipped")
                             },
                             icon = ready.iconFor(light),
@@ -696,31 +709,51 @@ private fun formatMiles(miles: Double): String = when {
 private class CatalogIcons(private val scale: Float) {
     private val cache = mutableMapOf<String, BitmapDescriptor>()
 
-    fun iconFor(color: String, buoy: Boolean, lighthouse: Boolean): BitmapDescriptor {
+    fun iconFor(color: String, buoy: Boolean, lighthouse: Boolean, colorB: String = ""): BitmapDescriptor {
         val tone = when {
             color.equals("R", ignoreCase = true) -> "R"
             color.equals("G", ignoreCase = true) -> "G"
             else -> "W"
         }
+        val toneB = when {
+            colorB.equals("R", ignoreCase = true) -> "R"
+            colorB.equals("G", ignoreCase = true) -> "G"
+            colorB.isNotBlank() -> "W"
+            else -> ""
+        }
+        val pair = if (toneB.isNotBlank() && toneB != tone) tone + toneB else tone
         val key = when {
-            buoy -> "B-$tone"
-            lighthouse -> "T-$tone"
-            else -> tone
+            buoy -> "B-$pair"
+            lighthouse -> "T-$pair"
+            else -> pair
         }
         return cache.getOrPut(key) {
             when {
-                buoy -> catalogDiamond(scale, tone)
-                lighthouse -> catalogTower(scale, tone)
-                else -> catalogDot(scale, tone)
+                buoy -> catalogDiamond(scale, pair)
+                lighthouse -> catalogTower(scale, pair)
+                else -> catalogDot(scale, pair)
             }
         }
     }
 }
 
-private fun catalogFill(colorKey: String): Int = when (colorKey) {
+private fun catalogFill(colorKey: String): Int = when (colorKey.uppercase().take(1)) {
     "R" -> 0xFFE74C3C.toInt()
     "G" -> 0xFF2ECC71.toInt()
     else -> 0xFFF4EBD0.toInt()
+}
+
+private fun pairTones(colorKey: String): Pair<String, String> {
+    val k = colorKey.uppercase()
+    if (k.length >= 2 && k[0] in "RGW" && k[1] in "RGW") {
+        return k.substring(0, 1) to k.substring(1, 2)
+    }
+    val one = when {
+        k.startsWith("R") -> "R"
+        k.startsWith("G") -> "G"
+        else -> "W"
+    }
+    return one to one
 }
 
 private fun catalogTower(scale: Float, colorKey: String): BitmapDescriptor {
@@ -736,7 +769,9 @@ private fun catalogTower(scale: Float, colorKey: String): BitmapDescriptor {
         color = 0xFF0B1F3A.toInt()
     }
     val cx = w / 2f
-    val body = catalogFill(colorKey)
+    val (leftTone, rightTone) = pairTones(colorKey)
+    val body = catalogFill(leftTone)
+    val bodyRight = catalogFill(rightTone)
     val baseTop = h * 0.78f
     val galleryY = h * 0.34f
     val lanternTop = h * 0.16f
@@ -750,6 +785,13 @@ private fun catalogTower(scale: Float, colorKey: String): BitmapDescriptor {
     }
     fill.color = body
     canvas.drawPath(tower, fill)
+    if (rightTone != leftTone) {
+        canvas.save()
+        canvas.clipRect(cx, 0f, w.toFloat(), h.toFloat())
+        fill.color = bodyRight
+        canvas.drawPath(tower, fill)
+        canvas.restore()
+    }
     canvas.drawPath(tower, stroke)
 
     fill.color = darken(body, 0.78f)
@@ -767,7 +809,7 @@ private fun catalogTower(scale: Float, colorKey: String): BitmapDescriptor {
         fill,
     )
 
-    fill.color = when (colorKey) {
+    fill.color = when (leftTone) {
         "R" -> 0xFFFFC9C2.toInt()
         "G" -> 0xFFC8F5D8.toInt()
         else -> 0xFFE8A838.toInt()
@@ -797,9 +839,10 @@ private fun catalogDiamond(scale: Float, colorKey: String): BitmapDescriptor {
     val size = (20 * scale).toInt().coerceAtLeast(20)
     val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
+    val (leftTone, rightTone) = pairTones(colorKey)
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = catalogFill(colorKey)
+        color = catalogFill(leftTone)
     }
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -817,6 +860,13 @@ private fun catalogDiamond(scale: Float, colorKey: String): BitmapDescriptor {
         close()
     }
     canvas.drawPath(diamond, fill)
+    if (rightTone != leftTone) {
+        canvas.save()
+        canvas.clipRect(c, 0f, size.toFloat(), size.toFloat())
+        fill.color = catalogFill(rightTone)
+        canvas.drawPath(diamond, fill)
+        canvas.restore()
+    }
     canvas.drawPath(diamond, stroke)
     return BitmapDescriptorFactory.fromBitmap(bmp)
 }
@@ -831,10 +881,18 @@ private fun catalogDot(scale: Float, colorKey: String): BitmapDescriptor {
         strokeWidth = 1.4f * scale
         color = 0xFF0B1F3A.toInt()
     }
-    fill.color = catalogFill(colorKey)
+    val (leftTone, rightTone) = pairTones(colorKey)
+    fill.color = catalogFill(leftTone)
     val r = size / 2f
     val inset = 1.2f * scale
     canvas.drawCircle(r, r, r - inset, fill)
+    if (rightTone != leftTone) {
+        canvas.save()
+        canvas.clipRect(r, 0f, size.toFloat(), size.toFloat())
+        fill.color = catalogFill(rightTone)
+        canvas.drawCircle(r, r, r - inset, fill)
+        canvas.restore()
+    }
     canvas.drawCircle(r, r, r - inset, stroke)
     return BitmapDescriptorFactory.fromBitmap(bmp)
 }

@@ -865,9 +865,33 @@ function showTab(name){
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function say(m){document.getElementById('lhStatus').textContent=m||'';}
-function charOf(lh){return (lh.light&&lh.light.char)||'';}
+function charOf(lh){
+ var a=(lh.light&&lh.light.char)||'';
+ var b=(lh.light_b&&lh.light_b.char)||'';
+ return b?a+' / '+b:a;
+}
 function colorOf(lh){return ((lh.light&&lh.light.color)||'W').toUpperCase();}
+function colorBOf(lh){return ((lh.light_b&&lh.light_b.color)||'').toUpperCase();}
 function swatch(c){return c==='R'?'#E23B3B':c==='G'?'#2ECC71':'#FFECD4';}
+function specFixed(spec){
+ if(!spec) return true;
+ var off=spec.off_s||[0];
+ var on=spec.on_s||[1];
+ return off.length===1 && Number(off[0])<=0 && on.length<=1;
+}
+function colorWord(c){
+ c=String(c||'W').toUpperCase();
+ return c==='R'?'red':c==='G'?'green':'white';
+}
+function ledHint(e){
+ var a=e.light||{};
+ var b=e.light_b;
+ var ca=colorWord(a.color||e.light_color||'W');
+ if(!b) return specFixed(a)?'One LED: steady '+ca:'One LED: flashes '+ca;
+ var cb=colorWord(b.color);
+ if(ca===cb) return specFixed(a)&&specFixed(b)?'One LED: steady '+ca:'One LED: flashes '+ca;
+ return 'One LED: '+ca+', then '+cb;
+}
 function items(data){return (data&&data.lighthouses)||[];}
 function syncLedCount(){
  var n=document.querySelector('[name=num_leds]');
@@ -880,12 +904,14 @@ function render(){
  var html='';
  lights.forEach(function(lh,i){
   var c=colorOf(lh);
+  var cb=colorBOf(lh);
   html+='<div class="card'+(lh.skip?' skip':'')+'">';
   html+='<div><button type="button" class="tiny" onclick="move('+i+',-1)">Up</button><br>';
   html+='<button type="button" class="tiny" onclick="move('+i+',1)">Down</button></div>';
-  html+='<button type="button" class="led" style="color:'+swatch(c)+'" title="Light only this LED" onclick="identify('+i+')">'+(i+1)+'</button>';
+  html+='<button type="button" class="led" style="color:'+swatch(c)+';background:'+(cb&&cb!==c?'linear-gradient(90deg,'+swatch(c)+'33,'+swatch(cb)+'33)':swatch(c)+'22')+'" title="Light only this LED" onclick="identify('+i+')">'+(i+1)+'</button>';
   html+='<div class="grow"><div>'+esc(lh.name||lh.short_name||('LED '+i))+'</div>';
   html+='<div class="amber">'+esc(charOf(lh)||'-')+'</div>';
+  html+='<div class="muted">'+esc(ledHint(lh))+'</div>';
   if(lh.metar) html+='<div class="muted">'+esc(lh.metar)+'</div>';
   html+='</div><label class="use">Use<input type="checkbox" '+(lh.skip?'':'checked')+' onchange="setSkip('+i+',!this.checked)"></label>';
   html+='<button type="button" class="tiny" onclick="removeAt('+i+')">X</button></div>';
@@ -939,8 +965,10 @@ function restoreDefaults(){
  });
 }
 function onMap(entry){
+ var members=(entry.pair&&entry.pair.members)||[];
  return lights.some(function(lh){
   if(lh.id&&entry.id&&lh.id===entry.id) return true;
+  if(lh.id&&members.indexOf(lh.id)>=0) return true;
   if(lh.name&&entry.name&&lh.name.toLowerCase()===entry.name.toLowerCase()) return true;
   return false;
  });
@@ -994,7 +1022,7 @@ function openCatalog(){
   var hits=pool.filter(function(e){
    if(catShore&&catShore!=='*'&&(e.region||'')!==catShore) return false;
    if(!q) return true;
-   var hay=norm([e.name,e.short_name,e.region,(e.light&&e.light.char)||'',e.metar,e.metar_name].join(' '));
+   var hay=norm([e.name,e.short_name,e.region,(e.light&&e.light.char)||'',(e.light_b&&e.light_b.char)||'',e.metar,e.metar_name,e.pair&&e.pair.kind==='range'?'front rear range':'',e.pair&&e.pair.kind==='channel'?'green red pair':''].join(' '));
    if(hay.indexOf(norm(q))>=0) return true;
    var hw=words(hay);
    var toks=words(q).filter(function(t){return !skip[t];});
@@ -1024,7 +1052,8 @@ function openCatalog(){
    html+='<p class="note">'+hits.length+(catShore&&catShore!=='*'?' on this shore':' of '+pool.length)+'</p><div id="catList">';
    hits.forEach(function(e,idx){
     var used=onMap(e);
-    html+='<div class="hit'+(used?' onmap':'')+'" data-i="'+idx+'"><b>'+esc(e.name)+'</b><div class="amber">'+esc((e.light&&e.light.char)||'')+' · '+esc(e.region||'')+(e.metar?' · '+esc(e.metar):'')+'</div>';
+    var ch=charOf(e);
+    html+='<div class="hit'+(used?' onmap':'')+'" data-i="'+idx+'"><b>'+esc(e.name)+'</b><div class="amber">'+esc(ch)+' · '+esc(e.region||'')+(e.metar?' · '+esc(e.metar):'')+'</div><div class="muted">'+esc(ledHint(e))+'</div>';
     html+=used?'<div class="muted">Already on this chart</div>':'<div class="muted">Tap to add</div>';
     html+='</div>';
    });
@@ -1062,7 +1091,10 @@ function openCatalog(){
 }
 function addCatalog(e){
  if(!e||onMap(e)) return;
- lights.push({id:e.id,name:e.name,short_name:e.short_name||e.name,led:lights.length,lat:e.lat||0,lon:e.lon||0,metar:e.metar||'',metar_fallback:e.metar_fallback||'',metar_name:e.metar_name||'',water:e.region||'',active:true,skip:false,light:e.light||{char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0]}});
+ var row={id:e.id,name:e.name,short_name:e.short_name||e.name,led:lights.length,lat:e.lat||0,lon:e.lon||0,metar:e.metar||'',metar_fallback:e.metar_fallback||'',metar_name:e.metar_name||'',water:e.region||'',active:true,skip:false,light:e.light||{char:'F W',color:'W',period_s:1,on_s:[1],off_s:[0]}};
+ if(e.light_b) row.light_b=e.light_b;
+ if(e.pair) row.pair=e.pair;
+ lights.push(row);
  render(); say('Added '+e.name); openCatalog();
 }
 function openCustom(){

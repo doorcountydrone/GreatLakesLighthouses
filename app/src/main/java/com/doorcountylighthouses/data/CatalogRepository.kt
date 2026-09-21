@@ -15,13 +15,66 @@ data class CatalogEntry(
     val periodS: Double,
     val onS: List<Double>,
     val offS: List<Double>,
+    val characteristicB: String = "",
+    val lightColorB: String = "",
+    val periodSB: Double = 1.0,
+    val onSB: List<Double> = listOf(1.0),
+    val offSB: List<Double> = listOf(0.0),
     val metar: String = "",
     val metarFallback: String = "",
     val metarName: String = "",
+    val pairKind: String = "",
+    val memberIds: List<String> = emptyList(),
 ) {
+    val displayCharacteristic: String
+        get() = when {
+            characteristicB.isBlank() -> characteristic
+            characteristic.isBlank() -> characteristicB
+            else -> "$characteristic / $characteristicB"
+        }
+
+    val ledPlayHint: String
+        get() = describeLedPlay(
+            lightColor, periodS, onS, offS,
+            lightColorB, periodSB, onSB, offSB, characteristicB,
+        )
+
     fun matches(query: String): Boolean = searchScore(query) > 0
 
     fun searchScore(query: String): Int = catalogSearchScore(this, query)
+}
+
+fun colorWord(code: String): String = when (code.uppercase()) {
+    "G" -> "green"
+    "R" -> "red"
+    else -> "white"
+}
+
+fun isFixedPattern(offS: List<Double>, onS: List<Double>): Boolean =
+    offS.size == 1 && offS.first() <= 0.0 && onS.size <= 1
+
+fun describeLedPlay(
+    color: String,
+    periodS: Double,
+    onS: List<Double>,
+    offS: List<Double>,
+    colorB: String = "",
+    periodSB: Double = 1.0,
+    onSB: List<Double> = emptyList(),
+    offSB: List<Double> = emptyList(),
+    characteristicB: String = "",
+): String {
+    val ca = colorWord(color)
+    if (characteristicB.isBlank() && colorB.isBlank()) {
+        return if (isFixedPattern(offS, onS)) "One LED: steady $ca" else "One LED: flashes $ca"
+    }
+    val cb = colorWord(colorB.ifBlank { color })
+    return if (ca == cb) {
+        if (isFixedPattern(offS, onS) && isFixedPattern(offSB, onSB)) "One LED: steady $ca"
+        else "One LED: flashes $ca"
+    } else {
+        "One LED: $ca, then $cb"
+    }
 }
 
 private val SEARCH_SKIP = setOf(
@@ -128,10 +181,14 @@ private fun catalogSearchScore(entry: CatalogEntry, query: String): Int {
             entry.shortName,
             entry.region,
             entry.characteristic,
+            entry.characteristicB,
             entry.lightColor,
+            entry.lightColorB,
             colorWord,
             entry.metar,
             entry.metarName,
+            if (entry.pairKind == "range") "front rear range pair" else "",
+            if (entry.pairKind == "channel") "green red pair 1 2" else "",
         ).joinToString(" "),
     )
     val hayTokens = catalogTokens(hayNorm)
@@ -223,12 +280,12 @@ object CatalogRepository {
 
     fun matchesChartBuoyFilter(entry: CatalogEntry, filter: String): Boolean {
         if (!isBuoy(entry)) return true
-        val color = entry.lightColor.uppercase()
+        val colors = setOf(entry.lightColor, entry.lightColorB).map { it.uppercase() }
         return when (filter) {
             BUOY_NONE -> false
-            BUOY_RED -> color == "R"
-            BUOY_GREEN -> color == "G"
-            else -> color == "G" || color == "R"
+            BUOY_RED -> "R" in colors
+            BUOY_GREEN -> "G" in colors
+            else -> "G" in colors || "R" in colors
         }
     }
 
@@ -266,12 +323,15 @@ object CatalogRepository {
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
                 val light = obj.optJSONObject("light")
+                val lightB = obj.optJSONObject("light_b")
+                val pair = obj.optJSONObject("pair")
                 val doubles: (org.json.JSONArray?) -> List<Double> = { arr ->
                     if (arr == null) emptyList()
                     else buildList(arr.length()) {
                         for (n in 0 until arr.length()) add(arr.optDouble(n))
                     }
                 }
+                val members = pair?.optJSONArray("members")
                 add(
                     CatalogEntry(
                         id = obj.optString("id"),
@@ -285,9 +345,21 @@ object CatalogRepository {
                         periodS = light?.optDouble("period_s", 1.0) ?: 1.0,
                         onS = doubles(light?.optJSONArray("on_s")).ifEmpty { listOf(1.0) },
                         offS = doubles(light?.optJSONArray("off_s")).ifEmpty { listOf(0.0) },
+                        characteristicB = lightB?.optString("char").orEmpty(),
+                        lightColorB = lightB?.optString("color").orEmpty(),
+                        periodSB = lightB?.optDouble("period_s", 1.0) ?: 1.0,
+                        onSB = doubles(lightB?.optJSONArray("on_s")).ifEmpty { listOf(1.0) },
+                        offSB = doubles(lightB?.optJSONArray("off_s")).ifEmpty { listOf(0.0) },
                         metar = obj.optString("metar"),
                         metarFallback = obj.optString("metar_fallback"),
                         metarName = obj.optString("metar_name"),
+                        pairKind = pair?.optString("kind").orEmpty(),
+                        memberIds = if (members == null) emptyList() else buildList(members.length()) {
+                            for (n in 0 until members.length()) {
+                                val id = members.optString(n)
+                                if (id.isNotBlank()) add(id)
+                            }
+                        },
                     )
                 )
             }
@@ -311,12 +383,18 @@ object CatalogRepository {
             periodS = entry.periodS,
             onS = entry.onS,
             offS = entry.offS,
+            characteristicB = entry.characteristicB,
+            lightColorB = entry.lightColorB,
+            periodSB = entry.periodSB,
+            onSB = entry.onSB,
+            offSB = entry.offSB,
         )
     }
 
     fun alreadyOnMap(entry: CatalogEntry, lights: List<Lighthouse>): Boolean {
         return lights.any { existing ->
             existing.id == entry.id ||
+                existing.id in entry.memberIds ||
                 existing.name.equals(entry.name, ignoreCase = true) ||
                 (existing.lat != 0.0 &&
                     kotlin.math.abs(existing.lat - entry.lat) < 0.002 &&

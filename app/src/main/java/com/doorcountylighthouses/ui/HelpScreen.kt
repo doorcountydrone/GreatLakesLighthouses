@@ -119,7 +119,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
                 "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
                 "• Drag the handle on the left to reorder. First in the list is the first light on the strip (usually the southernmost). In the browser, use Up / Down.\n\n" +
-                "• Add from catalog: pick Lighthouses, Lights, or Buoys, then a shore, or search. Lighthouses are the named towers (Canal North Pierhead counts). Lights are numbered marks and marinas. A few words is enough — st joseph finds St. Joseph. Color, flash, and nearest weather station are already filled in. Tap one to add it.\n\n" +
+                "• Add from catalog: pick Lighthouses, Lights, or Buoys, then a shore, or search. Lighthouses are the named towers (Canal North Pierhead counts). Lights are numbered marks and marinas. Front/rear ranges and nearby green/red pairs are one catalog row — they share one LED. The line under the name says whether that LED is one color or green, then red. A few words is enough — st joseph finds St. Joseph. Color, flash, and nearest weather station are already filled in. Tap one to add it.\n\n" +
                 "• Add custom: type a name, pick a flash pattern, and optionally a nearby weather station (for example KSUE).\n\n" +
                 "• Restore defaults: puts back Kewaunee through Rock Island. Then Save so the chart uses that list.",
         )

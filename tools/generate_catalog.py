@@ -204,18 +204,276 @@ def assign_metars(items, stations):
     return items
 
 
+_FRONT_RE = re.compile(r"\bfront\b", re.I)
+_REAR_RE = re.compile(r"\brear\b", re.I)
+_RANGE_WORD_RE = re.compile(r"\brange\b", re.I)
+_FILLER_RE = re.compile(r"\b(the|of|and|a|light|lights|lighted|lighthouse|lt|no|number)\b", re.I)
+_COMPASS_RE = re.compile(r"\b(east|west|north|south|northeast|northwest|southeast|southwest|ne|nw|se|sw)\b", re.I)
+_NUM_RE = re.compile(r"\b\d+[a-z]?\b", re.I)
+RANGE_PAIR_KM = 5.0
+CHANNEL_PAIR_KM = 0.45
+
+
+def _title_aid(s):
+    small = {"and", "of", "the"}
+    parts = []
+    for i, word in enumerate((s or "").split()):
+        low = word.lower()
+        if low in small and i:
+            parts.append(low)
+        else:
+            parts.append(low[:1].upper() + low[1:])
+    return " ".join(parts)
+
+
+def _range_role(name):
+    text = str(name or "")
+    if not _RANGE_WORD_RE.search(text):
+        return None
+    if re.search(r"\bpassing\b", text, re.I):
+        return None
+    front = bool(_FRONT_RE.search(text))
+    rear = bool(_REAR_RE.search(text))
+    if front == rear:
+        return None
+    return "front" if front else "rear"
+
+
+def _range_base(name):
+    s = str(name or "").lower()
+    s = _FRONT_RE.sub(" ", s)
+    s = _REAR_RE.sub(" ", s)
+    s = _RANGE_WORD_RE.sub(" ", s)
+    s = _FILLER_RE.sub(" ", s)
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _channel_stem(name):
+    s = str(name or "").lower()
+    s = re.sub(r"\blighted\s+buoy\b", "buoy", s)
+    s = _COMPASS_RE.sub(" ", s)
+    s = _FILLER_RE.sub(" ", s)
+    s = _NUM_RE.sub(" ", s)
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _light_color(item):
+    spec = item.get("light") if isinstance(item.get("light"), dict) else {}
+    return str(spec.get("color") or "W").upper()
+
+
+def _copy_light(item):
+    spec = item.get("light")
+    return dict(spec) if isinstance(spec, dict) else {"char": "F W", "color": "W", "period_s": 1.0, "on_s": [1.0], "off_s": [0.0]}
+
+
+def _same_light(a, b):
+    return (
+        str(a.get("char") or "") == str(b.get("char") or "")
+        and str(a.get("color") or "") == str(b.get("color") or "")
+        and float(a.get("period_s") or 0) == float(b.get("period_s") or 0)
+    )
+
+
+def _aid_number(name):
+    text = str(name or "").strip()
+    m = re.search(r"(\d+[a-z]?)\s*$", text, re.I)
+    if m:
+        return m.group(1).upper()
+    m = re.search(r"\blight\s+(\d+[a-z]?)\b", text, re.I)
+    return m.group(1).upper() if m else ""
+
+
+def _num_key(label):
+    m = re.match(r"(\d+)([A-Z]?)$", str(label or ""), re.I)
+    if not m:
+        return (0, "")
+    return (int(m.group(1)), m.group(2).upper())
+
+
+def _iala_mates(green, red):
+    gn = _aid_number(green.get("name"))
+    rn = _aid_number(red.get("name"))
+    if not gn or not rn:
+        return True
+    gv, gs = _num_key(gn)
+    rv, rs = _num_key(rn)
+    if gs != rs:
+        return False
+    return abs(gv - rv) == 1
+
+
+def _merge_pair(a, b, kind):
+    lat = round((float(a.get("lat") or 0) + float(b.get("lat") or 0)) / 2.0, 5)
+    lon = round((float(a.get("lon") or 0) + float(b.get("lon") or 0)) / 2.0, 5)
+    if kind == "range":
+        front = a if _range_role(a.get("name")) == "front" else b
+        rear = b if front is a else a
+        base = _range_base(front.get("name")) or _range_base(rear.get("name"))
+        name = (_title_aid(base) + " Range").strip()
+        if not name.lower().endswith("range"):
+            name = "Range Lights"
+        short = name
+        primary, other = _copy_light(front), _copy_light(rear)
+        note = "Paired range front/rear. One LED."
+    else:
+        color_a = _light_color(a)
+        green = a if color_a == "G" else b
+        red = b if green is a else a
+        stem = _channel_stem(green.get("name")) or _channel_stem(red.get("name"))
+        nums = [n for n in (_aid_number(green.get("name")), _aid_number(red.get("name"))) if n]
+        nums = sorted(set(nums), key=_num_key)
+        label = "/".join(nums) if nums else "1/2"
+        buoy = "buoy" in str(green.get("name") or "").lower() or "buoy" in str(red.get("name") or "").lower()
+        stem = re.sub(r"\bbuoys?\b", " ", stem or "")
+        stem = re.sub(r"\s+", " ", stem).strip()
+        pretty = _title_aid(stem) or "Channel"
+        name = pretty + (" Buoys " if buoy else " Light ") + label
+        short = pretty + " " + label if len(pretty) < 28 else name
+        primary, other = _copy_light(green), _copy_light(red)
+        note = "Paired green and red. One LED shows both."
+    primary["source"] = note
+    item = {
+        "id": slug(name, lat, lon),
+        "name": name,
+        "short_name": short,
+        "lat": lat,
+        "lon": lon,
+        "region": a.get("region") or b.get("region") or "",
+        "llnr": a.get("llnr") or b.get("llnr") or "",
+        "light": primary,
+        "pair": {
+            "kind": kind,
+            "members": [a.get("id") or "", b.get("id") or ""],
+        },
+        "metar": a.get("metar") or b.get("metar") or "",
+        "metar_fallback": a.get("metar_fallback") or b.get("metar_fallback") or "",
+        "metar_name": a.get("metar_name") or b.get("metar_name") or "",
+    }
+    if not _same_light(primary, other):
+        other["source"] = note
+        item["light_b"] = other
+    return item
+
+
+def pair_related_lights(items):
+    """Collapse front/rear ranges and nearby green/red channel pairs onto one catalog row."""
+    leftover = []
+    used = set()
+    range_items = []
+    for i, item in enumerate(items):
+        if item.get("pair"):
+            leftover.append(item)
+            used.add(i)
+            continue
+        role = _range_role(item.get("name"))
+        if not role:
+            continue
+        base = _range_base(item.get("name"))
+        if not base:
+            continue
+        range_items.append((i, role, base, item))
+
+    paired = []
+
+    def _pair_range_groups(groups):
+        for group in groups.values():
+            fronts = [(i, item) for i, role, item in group if role == "front"]
+            rears = [(i, item) for i, role, item in group if role == "rear"]
+            while fronts and rears:
+                best = None
+                best_km = RANGE_PAIR_KM
+                for fi, front in fronts:
+                    for ri, rear in rears:
+                        if fi in used or ri in used:
+                            continue
+                        d = _km(front["lat"], front["lon"], rear["lat"], rear["lon"])
+                        if d < best_km:
+                            best_km = d
+                            best = (fi, front, ri, rear)
+                if best is None:
+                    break
+                fi, front, ri, rear = best
+                paired.append(_merge_pair(front, rear, "range"))
+                used.add(fi)
+                used.add(ri)
+                fronts = [(i, item) for i, item in fronts if i != fi]
+                rears = [(i, item) for i, item in rears if i != ri]
+
+    by_region_base = {}
+    for i, role, base, item in range_items:
+        by_region_base.setdefault((item.get("region") or "", base), []).append((i, role, item))
+    _pair_range_groups(by_region_base)
+    by_base = {}
+    for i, role, base, item in range_items:
+        if i in used:
+            continue
+        by_base.setdefault(base, []).append((i, role, item))
+    _pair_range_groups(by_base)
+
+    by_stem = {}
+    for i, item in enumerate(items):
+        if i in used:
+            continue
+        if _range_role(item.get("name")):
+            continue
+        stem = _channel_stem(item.get("name"))
+        if not stem:
+            continue
+        color = _light_color(item)
+        if color not in ("G", "R"):
+            continue
+        by_stem.setdefault((item.get("region") or "", stem), []).append((i, color, item))
+
+    for group in by_stem.values():
+        greens = [(i, item) for i, color, item in group if color == "G"]
+        reds = [(i, item) for i, color, item in group if color == "R"]
+        while greens and reds:
+            best = None
+            best_km = CHANNEL_PAIR_KM
+            for gi, green in greens:
+                for ri, red in reds:
+                    if not _iala_mates(green, red):
+                        continue
+                    d = _km(green["lat"], green["lon"], red["lat"], red["lon"])
+                    if d < best_km:
+                        best_km = d
+                        best = (gi, green, ri, red)
+            if best is None:
+                break
+            gi, green, ri, red = best
+            paired.append(_merge_pair(green, red, "channel"))
+            used.add(gi)
+            used.add(ri)
+            greens = [(i, item) for i, item in greens if i != gi]
+            reds = [(i, item) for i, item in reds if i != ri]
+
+    for i, item in enumerate(items):
+        if i not in used:
+            leftover.append(item)
+    out = leftover + paired
+    out.sort(key=lambda x: (float(x.get("lat") or 0), float(x.get("lon") or 0)))
+    return out
+
+
 def write_catalog(items):
+    items = pair_related_lights(items)
     out = {
-        "version": 2,
+        "version": 3,
         "area": "The Great Lakes (US and Canada)",
-        "notes": "Search catalog in the app, then add lights to your LED list. Includes named lighthouses plus US and Canadian lights and lighted buoys on all five Great Lakes. Each entry has the nearest METAR station. Not all entries are on the strip.",
+        "notes": "Search catalog in the app, then add lights to your LED list. Front/rear ranges and nearby green/red pairs share one LED. Includes named lighthouses plus US and Canadian lights and lighted buoys on all five Great Lakes. Each entry has the nearest METAR station. Not all entries are on the strip.",
         "count": len(items),
         "lighthouses": items,
     }
     text = json.dumps(out, indent=2)
     APP_CATALOG.write_text(text, encoding="utf-8")
     PICO_CATALOG.write_text(text, encoding="utf-8")
+    n_range = sum(1 for i in items if (i.get("pair") or {}).get("kind") == "range")
+    n_chan = sum(1 for i in items if (i.get("pair") or {}).get("kind") == "channel")
     print("wrote", APP_CATALOG, "and", PICO_CATALOG, "count", len(items))
+    print("pairs", n_range, "range,", n_chan, "green/red")
     print("regions", {r: sum(1 for i in items if i["region"] == r) for r in sorted({i["region"] for i in items})})
 
 
