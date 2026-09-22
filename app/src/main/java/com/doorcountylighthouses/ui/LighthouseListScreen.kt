@@ -45,6 +45,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,6 +86,7 @@ fun LighthouseListScreen(
     onPicoBaseUrlChange: (String) -> Unit,
     lights: List<Lighthouse>,
     onLightsChange: (List<Lighthouse>, save: Boolean) -> Unit,
+    initialStatus: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current.applicationContext
@@ -92,6 +94,9 @@ fun LighthouseListScreen(
     val picoApi = remember { PicoLighthousesApi(context) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(initialStatus) {
+        if (!initialStatus.isNullOrBlank()) statusMessage = initialStatus
+    }
     var showCatalog by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
 

@@ -514,7 +514,11 @@ private fun LightMap(
                                 if (light.skip) append("  skipped")
                             },
                             icon = ready.iconFor(light),
-                            anchor = Offset(0.5f, ready.anchorY),
+                            anchor = if (CatalogRepository.isLighthouse(light.name, light.shortName)) {
+                                Offset(0.5f, ready.anchorY)
+                            } else {
+                                Offset(0.5f, 0.5f)
+                            },
                             alpha = if (light.skip) 0.55f else 1f,
                             zIndex = 2f,
                             onClick = {
@@ -575,6 +579,11 @@ private fun LightMap(
             }
             if (showCatalog) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    CompactChip(
+                        selected = aidFilter == CatalogRepository.AID_NONE,
+                        onClick = { onAidFilterChange(CatalogRepository.AID_NONE) },
+                        label = "None",
+                    )
                     CompactChip(
                         selected = aidFilter == CatalogRepository.AID_TOWERS,
                         onClick = { onAidFilterChange(CatalogRepository.AID_TOWERS) },
@@ -740,6 +749,7 @@ private class CatalogIcons(private val scale: Float) {
 private fun catalogFill(colorKey: String): Int = when (colorKey.uppercase().take(1)) {
     "R" -> 0xFFE74C3C.toInt()
     "G" -> 0xFF2ECC71.toInt()
+    "S" -> 0xFF7A93A8.toInt()
     else -> 0xFFF4EBD0.toInt()
 }
 
@@ -966,37 +976,140 @@ private class LighthouseIcons(private val scale: Float) {
     }
 
     fun iconFor(light: Lighthouse): BitmapDescriptor {
-        val colorKey = when {
-            light.skip -> "S"
-            light.lightColor.equals("R", ignoreCase = true) -> "R"
-            light.lightColor.equals("G", ignoreCase = true) -> "G"
-            else -> "W"
-        }
+        val buoy = CatalogRepository.isBuoy(light.name, light.shortName)
+        val tower = CatalogRepository.isLighthouse(light.name, light.shortName)
+        val pair = stripPairKey(light)
         val led = light.displayLed
-        return cache.getOrPut("$colorKey-$led") {
-            val body: Int
-            val lamp: Int
-            when (colorKey) {
-                "R" -> {
-                    body = 0xFFE74C3C.toInt()
-                    lamp = 0xFFFFC9C2.toInt()
+        val kind = when {
+            buoy -> "B"
+            tower -> "T"
+            else -> "C"
+        }
+        return cache.getOrPut("$kind-$pair-$led") {
+            when {
+                buoy -> stripDiamond(scale, pair, led)
+                tower -> {
+                    val body = catalogFill(pair)
+                    val lamp = when (pair.take(1)) {
+                        "R" -> 0xFFFFC9C2.toInt()
+                        "G" -> 0xFFC8F5D8.toInt()
+                        "S" -> 0xFFD5DEE6.toInt()
+                        else -> 0xFFE8A838.toInt()
+                    }
+                    lighthouseDescriptor(scale, body, lamp, led)
                 }
-                "G" -> {
-                    body = 0xFF2ECC71.toInt()
-                    lamp = 0xFFC8F5D8.toInt()
-                }
-                "S" -> {
-                    body = 0xFF7A93A8.toInt()
-                    lamp = 0xFFD5DEE6.toInt()
-                }
-                else -> {
-                    body = 0xFFF4EBD0.toInt()
-                    lamp = 0xFFE8A838.toInt()
-                }
+                else -> stripCircle(scale, pair, led)
             }
-            lighthouseDescriptor(scale, body, lamp, led)
         }
     }
+}
+
+private fun stripPairKey(light: Lighthouse): String {
+    if (light.skip) return "S"
+    val tone = when {
+        light.lightColor.equals("R", ignoreCase = true) -> "R"
+        light.lightColor.equals("G", ignoreCase = true) -> "G"
+        else -> "W"
+    }
+    val toneB = when {
+        light.lightColorB.equals("R", ignoreCase = true) -> "R"
+        light.lightColorB.equals("G", ignoreCase = true) -> "G"
+        light.lightColorB.isNotBlank() -> "W"
+        else -> ""
+    }
+    return if (toneB.isNotBlank() && toneB != tone) tone + toneB else tone
+}
+
+private fun drawCenteredLed(canvas: Canvas, cx: Float, cy: Float, scale: Float, led: Int) {
+    val label = led.toString()
+    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFF4EBD0.toInt()
+        textAlign = Paint.Align.CENTER
+        textSize = 12f * scale
+        isFakeBoldText = true
+    }
+    val tw = text.measureText(label)
+    val padX = 4f * scale
+    val padY = 3.2f * scale
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = android.graphics.Color.argb(0xE6, 0x0B, 0x1F, 0x3A)
+    }
+    canvas.drawRoundRect(
+        cx - tw / 2f - padX,
+        cy - text.textSize / 2f - padY * 0.35f,
+        cx + tw / 2f + padX,
+        cy + text.textSize / 2f + padY * 0.15f,
+        3f * scale,
+        3f * scale,
+        fill,
+    )
+    val textY = cy - (text.descent() + text.ascent()) / 2f
+    canvas.drawText(label, cx, textY, text)
+}
+
+private fun stripDiamond(scale: Float, colorKey: String, led: Int): BitmapDescriptor {
+    val size = (44 * scale).toInt().coerceAtLeast(44)
+    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val (leftTone, rightTone) = pairTones(colorKey)
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = catalogFill(leftTone)
+    }
+    val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeWidth = 2f * scale
+        color = 0xFF0B1F3A.toInt()
+    }
+    val c = size / 2f
+    val inset = 2.2f * scale
+    val diamond = Path().apply {
+        moveTo(c, inset)
+        lineTo(size - inset, c)
+        lineTo(c, size - inset)
+        lineTo(inset, c)
+        close()
+    }
+    canvas.drawPath(diamond, fill)
+    if (rightTone != leftTone) {
+        canvas.save()
+        canvas.clipRect(c, 0f, size.toFloat(), size.toFloat())
+        fill.color = catalogFill(rightTone)
+        canvas.drawPath(diamond, fill)
+        canvas.restore()
+    }
+    canvas.drawPath(diamond, stroke)
+    drawCenteredLed(canvas, c, c, scale, led)
+    return BitmapDescriptorFactory.fromBitmap(bmp)
+}
+
+private fun stripCircle(scale: Float, colorKey: String, led: Int): BitmapDescriptor {
+    val size = (40 * scale).toInt().coerceAtLeast(40)
+    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * scale
+        color = 0xFF0B1F3A.toInt()
+    }
+    val (leftTone, rightTone) = pairTones(colorKey)
+    fill.color = catalogFill(leftTone)
+    val r = size / 2f
+    val inset = 2f * scale
+    canvas.drawCircle(r, r, r - inset, fill)
+    if (rightTone != leftTone) {
+        canvas.save()
+        canvas.clipRect(r, 0f, size.toFloat(), size.toFloat())
+        fill.color = catalogFill(rightTone)
+        canvas.drawCircle(r, r, r - inset, fill)
+        canvas.restore()
+    }
+    canvas.drawCircle(r, r, r - inset, stroke)
+    drawCenteredLed(canvas, r, r, scale, led)
+    return BitmapDescriptorFactory.fromBitmap(bmp)
 }
 
 private fun lighthouseDescriptor(scale: Float, body: Int, lamp: Int, led: Int): BitmapDescriptor {

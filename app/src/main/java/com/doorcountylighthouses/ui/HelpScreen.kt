@@ -127,8 +127,8 @@ fun HelpScreen(modifier: Modifier = Modifier) {
 
         HelpCard(
             title = "Chart tab",
-            body = "Bold lighthouse symbols are the lights on your strip. Cream is white, then red or green. A faded lighthouse is skipped. The number is the LED.\n\n" +
-                "Faint colored dots are catalog aids not on your list yet. Turn them on with Catalog. Lighthouses shows named towers — Canal North Pierhead, Cana Island, ranges. Lights shows numbered marks, marinas, and breakwaters. All shows both. None / Green / Red / Both is for buoys. Tap a dot to add it, or tap empty water for the nearest catalog aid. New lights go at the end of the list — drag on Lights to match the strip, then Save to chart.\n\n" +
+            body = "Bold symbols are the lights on your strip. A lighthouse is a named tower, a larger circle is another light, a larger diamond is a buoy. Cream is white, then red or green. Faded is skipped. The number is the LED.\n\n" +
+                "Faint catalog marks use the same shapes, smaller. Turn them on with Catalog. None / Lighthouses / Lights / All is for towers and other lights. None / Green / Red / Both is for buoys. Tap a mark to add it, or tap empty water for the nearest catalog aid. New lights go at the end of the list — drag on Lights to match the strip, then Save to chart.\n\n" +
                 "Use Map for Google Maps (Satellite is there too), or NOAA for the official ENC nautical chart — depths, channels, and the real aids. Same pins on both. NOAA is not for navigation.\n\n" +
                 "Tap a strip lighthouse to Identify that LED. Your phone must be on the same Wi-Fi as the chart. The Chart map needs internet for tiles, so on setup Wi-Fi use the Lights tab instead.\n\n" +
                 "Custom lights without coordinates do not appear.",

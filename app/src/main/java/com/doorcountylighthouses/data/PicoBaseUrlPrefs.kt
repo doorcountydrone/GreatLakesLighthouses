@@ -83,7 +83,11 @@ fun loadChartAidFilter(context: Context): String {
         .orEmpty()
         .uppercase()
     return when (raw) {
-        CatalogRepository.AID_MARKS, CatalogRepository.AID_BOTH, CatalogRepository.AID_TOWERS -> raw
+        CatalogRepository.AID_NONE,
+        CatalogRepository.AID_MARKS,
+        CatalogRepository.AID_BOTH,
+        CatalogRepository.AID_TOWERS,
+        -> raw
         else -> CatalogRepository.AID_TOWERS
     }
 }

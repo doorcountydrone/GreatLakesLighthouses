@@ -227,6 +227,7 @@ object CatalogRepository {
     const val AID_TOWERS = "TOWERS"
     const val AID_MARKS = "MARKS"
     const val AID_BOTH = "FIXED_BOTH"
+    const val AID_NONE = "FIXED_NONE"
 
     val REGION_ORDER = listOf(
         "Indiana / Chicago",
@@ -253,19 +254,21 @@ object CatalogRepository {
         "ice boom", "dock", "academy", "club",
     )
 
-    fun isBuoy(entry: CatalogEntry): Boolean {
-        val n = "${entry.name} ${entry.shortName}".lowercase()
+    fun isBuoy(name: String, shortName: String = ""): Boolean {
+        val n = "$name $shortName".lowercase()
         return n.contains("buoy")
     }
 
-    fun isLighthouse(entry: CatalogEntry): Boolean {
-        if (isBuoy(entry)) return false
-        val name = entry.name.trim()
-        val short = entry.shortName.trim()
-        if (numberedAid.containsMatchIn(name) || numberedAid.containsMatchIn(short)) return false
-        val n = "$name $short".lowercase()
+    fun isBuoy(entry: CatalogEntry): Boolean = isBuoy(entry.name, entry.shortName)
+
+    fun isLighthouse(name: String, shortName: String = ""): Boolean {
+        if (isBuoy(name, shortName)) return false
+        if (numberedAid.containsMatchIn(name.trim()) || numberedAid.containsMatchIn(shortName.trim())) return false
+        val n = "$name $shortName".lowercase()
         return utilityWords.none { n.contains(it) }
     }
+
+    fun isLighthouse(entry: CatalogEntry): Boolean = isLighthouse(entry.name, entry.shortName)
 
     fun isOtherLight(entry: CatalogEntry): Boolean = !isBuoy(entry) && !isLighthouse(entry)
 
@@ -292,6 +295,7 @@ object CatalogRepository {
     fun matchesChartAidFilter(entry: CatalogEntry, filter: String): Boolean {
         if (isBuoy(entry)) return true
         return when (filter) {
+            AID_NONE -> false
             AID_MARKS -> isOtherLight(entry)
             AID_BOTH -> true
             else -> isLighthouse(entry)
