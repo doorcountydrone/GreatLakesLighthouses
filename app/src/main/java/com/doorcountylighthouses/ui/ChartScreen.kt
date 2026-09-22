@@ -84,6 +84,7 @@ fun ChartScreen(
     onPicoBaseUrlChange: (String) -> Unit,
     lights: List<Lighthouse>,
     onLightsChange: (List<Lighthouse>, save: Boolean) -> Unit,
+    listDirty: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current.applicationContext
@@ -174,6 +175,13 @@ fun ChartScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = Cream,
         )
+        if (listDirty) {
+            Text(
+                text = "Not saved to the chart — open Lights and tap Save to chart.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Amber,
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()

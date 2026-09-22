@@ -86,6 +86,8 @@ fun LighthouseListScreen(
     onPicoBaseUrlChange: (String) -> Unit,
     lights: List<Lighthouse>,
     onLightsChange: (List<Lighthouse>, save: Boolean) -> Unit,
+    onSyncedWithChart: () -> Unit = {},
+    listDirty: Boolean = false,
     initialStatus: String? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -99,9 +101,30 @@ fun LighthouseListScreen(
     }
     var showCatalog by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
+    var confirmFetch by remember { mutableStateOf(false) }
 
     fun persist(next: List<Lighthouse>, save: Boolean = true) {
         onLightsChange(next, save)
+    }
+
+    fun fetchFromChart() {
+        isLoading = true
+        statusMessage = "Fetching from the chart…"
+        scope.launch {
+            val url = PicoUrls.normalize(picoBaseUrl)
+            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
+            when (val result = picoApi.fetch(url)) {
+                is PicoLighthousesApi.FetchResult.Success -> {
+                    persist(result.lights)
+                    onSyncedWithChart()
+                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
+                    statusMessage = "Fetched ${result.lights.size} lights from the chart"
+                }
+                is PicoLighthousesApi.FetchResult.Error ->
+                    statusMessage = "Fetch failed: ${result.message}"
+            }
+            isLoading = false
+        }
     }
 
     val haptic = LocalHapticFeedback.current
@@ -172,21 +195,10 @@ fun LighthouseListScreen(
             ) {
                 Button(
                     onClick = {
-                        isLoading = true
-                        statusMessage = "Fetching from the chart…"
-                        scope.launch {
-                            val url = PicoUrls.normalize(picoBaseUrl)
-                            if (url != picoBaseUrl) onPicoBaseUrlChange(url)
-                            when (val result = picoApi.fetch(url)) {
-                                is PicoLighthousesApi.FetchResult.Success -> {
-                                    persist(result.lights)
-                                    if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
-                                    statusMessage = "Fetched ${result.lights.size} lights from the chart"
-                                }
-                                is PicoLighthousesApi.FetchResult.Error ->
-                                    statusMessage = "Fetch failed: ${result.message}"
-                            }
-                            isLoading = false
+                        if (listDirty) {
+                            confirmFetch = true
+                        } else {
+                            fetchFromChart()
                         }
                     },
                     enabled = !isLoading,
@@ -203,6 +215,7 @@ fun LighthouseListScreen(
                             when (val result = picoApi.save(url, lights)) {
                                 is PicoLighthousesApi.SaveResult.Success -> {
                                     persist(lights)
+                                    onSyncedWithChart()
                                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                                     statusMessage = "Saved ${lights.count { !it.skip }} lights to the chart"
                                 }
@@ -242,6 +255,13 @@ fun LighthouseListScreen(
             }
             statusMessage?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = Amber)
+            }
+            if (listDirty) {
+                Text(
+                    text = "Not saved to the chart — tap Save to chart.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Amber,
+                )
             }
             Text(
                 text = "List (${lights.size} lights, ${lights.count { !it.skip }} on)",
@@ -291,6 +311,26 @@ fun LighthouseListScreen(
         }
     }
 
+    if (confirmFetch) {
+        AlertDialog(
+            onDismissRequest = { confirmFetch = false },
+            title = { Text("Replace list from the chart?") },
+            text = {
+                Text("Fetch loads what is on the chart and drops unsaved changes on this phone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmFetch = false
+                        fetchFromChart()
+                    },
+                ) { Text("Fetch anyway") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmFetch = false }) { Text("Cancel") }
+            },
+        )
+    }
     if (showCatalog) {
         CatalogPickerDialog(
             alreadyOnMap = lights,

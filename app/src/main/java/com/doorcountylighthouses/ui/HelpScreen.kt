@@ -116,7 +116,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             title = "Your light list",
             body = "• Chart address: tap Find chart, or Fetch / Save / Identify. The app tries the box, the last home IP it used, and 192.168.4.1. On success it fills in the working address. LED 1 is the first light on the strip.\n\n" +
                 "• Fetch from chart / Reload: loads the list that is already on the chart.\n\n" +
-                "• Save to chart / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights.\n\n" +
+                "• Save to chart / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights. The app warns if you leave Lights or Fetch again with unsaved changes.\n\n" +
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
                 "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
                 "• Drag the handle on the left to reorder. First in the list is the first light on the strip (usually the southernmost). In the browser, use Up / Down.\n\n" +

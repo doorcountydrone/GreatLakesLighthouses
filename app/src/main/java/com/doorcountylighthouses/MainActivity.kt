@@ -2,6 +2,7 @@ package com.doorcountylighthouses
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
@@ -13,12 +14,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -71,16 +74,32 @@ class MainActivity : ComponentActivity() {
                     var picoBaseUrl by remember { mutableStateOf(loadPicoBaseUrl(context)) }
                     var lights by remember { mutableStateOf(LighthouseRepository.load(context)) }
                     var fetchNote by remember { mutableStateOf<String?>(null) }
+                    var listDirty by remember { mutableStateOf(false) }
+                    var pendingLeaveTab by remember { mutableStateOf<Int?>(null) }
                     val persistLights: (List<Lighthouse>, Boolean) -> Unit = { next, save ->
                         val numbered = LighthouseRepository.renumber(next)
                         lights = numbered
                         if (save) LighthouseRepository.saveLocal(context, numbered)
+                        listDirty = true
+                    }
+                    val markSynced: () -> Unit = { listDirty = false }
+                    fun trySelectTab(tab: Int) {
+                        val leavingListTabs = selectedTab <= 1 && tab >= 2
+                        if (listDirty && leavingListTabs) {
+                            pendingLeaveTab = tab
+                        } else {
+                            selectedTab = tab
+                        }
+                    }
+                    BackHandler(enabled = listDirty) {
+                        pendingLeaveTab = -1
                     }
                     LaunchedEffect(Unit) {
                         fetchNote = "Fetching from the chart…"
                         when (val result = PicoLighthousesApi(context).fetch(PicoUrls.normalize(picoBaseUrl))) {
                             is PicoLighthousesApi.FetchResult.Success -> {
                                 persistLights(result.lights, true)
+                                markSynced()
                                 if (result.usedUrl != picoBaseUrl) {
                                     picoBaseUrl = result.usedUrl
                                     savePicoBaseUrl(context, result.usedUrl)
@@ -107,28 +126,28 @@ class MainActivity : ComponentActivity() {
                             NavigationBar(containerColor = Navy, contentColor = Amber) {
                                 NavigationBarItem(
                                     selected = selectedTab == 0,
-                                    onClick = { selectedTab = 0 },
+                                    onClick = { trySelectTab(0) },
                                     icon = { Icon(painterResource(R.drawable.ic_lighthouse), contentDescription = "Lights") },
                                     label = { Text("Lights") },
                                     colors = navColors,
                                 )
                                 NavigationBarItem(
                                     selected = selectedTab == 1,
-                                    onClick = { selectedTab = 1 },
+                                    onClick = { trySelectTab(1) },
                                     icon = { Icon(Icons.Filled.Map, contentDescription = "Chart") },
                                     label = { Text("Chart") },
                                     colors = navColors,
                                 )
                                 NavigationBarItem(
                                     selected = selectedTab == 2,
-                                    onClick = { selectedTab = 2 },
+                                    onClick = { trySelectTab(2) },
                                     icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
                                     label = { Text("Settings") },
                                     colors = navColors,
                                 )
                                 NavigationBarItem(
                                     selected = selectedTab == 3,
-                                    onClick = { selectedTab = 3 },
+                                    onClick = { trySelectTab(3) },
                                     icon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Help") },
                                     label = { Text("Help") },
                                     colors = navColors,
@@ -146,6 +165,8 @@ class MainActivity : ComponentActivity() {
                                     },
                                     lights = lights,
                                     onLightsChange = persistLights,
+                                    onSyncedWithChart = markSynced,
+                                    listDirty = listDirty,
                                     initialStatus = fetchNote,
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -157,6 +178,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     lights = lights,
                                     onLightsChange = persistLights,
+                                    listDirty = listDirty,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 2 -> PicoSettingsScreen(
@@ -170,6 +192,32 @@ class MainActivity : ComponentActivity() {
                                 else -> HelpScreen(modifier = Modifier.fillMaxSize())
                             }
                         }
+                    }
+                    pendingLeaveTab?.let { target ->
+                        AlertDialog(
+                            onDismissRequest = { pendingLeaveTab = null },
+                            title = { Text("List not saved to the chart") },
+                            text = {
+                                Text("Adds, skips, reorders, and deletes stay on this phone until you tap Save to chart.")
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { pendingLeaveTab = null }) {
+                                    Text("Stay")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = {
+                                        pendingLeaveTab = null
+                                        if (target < 0) {
+                                            finish()
+                                        } else {
+                                            selectedTab = target
+                                        }
+                                    },
+                                ) { Text("Leave anyway") }
+                            },
+                        )
                     }
                 }
             }
