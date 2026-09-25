@@ -36,8 +36,6 @@ import com.doorcountylighthouses.data.Lighthouse
 import com.doorcountylighthouses.data.LighthouseRepository
 import com.doorcountylighthouses.data.loadPicoBaseUrl
 import com.doorcountylighthouses.data.savePicoBaseUrl
-import com.doorcountylighthouses.pico.PicoLighthousesApi
-import com.doorcountylighthouses.pico.PicoUrls
 import com.doorcountylighthouses.ui.ChartScreen
 import com.doorcountylighthouses.ui.HelpScreen
 import com.doorcountylighthouses.ui.LighthouseListScreen
@@ -73,7 +71,11 @@ class MainActivity : ComponentActivity() {
                     var selectedTab by remember { mutableIntStateOf(0) }
                     var picoBaseUrl by remember { mutableStateOf(loadPicoBaseUrl(context)) }
                     var lights by remember { mutableStateOf(LighthouseRepository.load(context)) }
-                    var fetchNote by remember { mutableStateOf<String?>(null) }
+                    var fetchNote by remember {
+                        mutableStateOf<String?>(
+                            "List on this phone. Fetch from chart to load the strip, or Save to chart to send this list.",
+                        )
+                    }
                     var listDirty by remember { mutableStateOf(false) }
                     var pendingLeaveTab by remember { mutableStateOf<Int?>(null) }
                     val persistLights: (List<Lighthouse>, Boolean) -> Unit = { next, save ->
@@ -93,22 +95,6 @@ class MainActivity : ComponentActivity() {
                     }
                     BackHandler(enabled = listDirty) {
                         pendingLeaveTab = -1
-                    }
-                    LaunchedEffect(Unit) {
-                        fetchNote = "Fetching from the chart…"
-                        when (val result = PicoLighthousesApi(context).fetch(PicoUrls.normalize(picoBaseUrl))) {
-                            is PicoLighthousesApi.FetchResult.Success -> {
-                                persistLights(result.lights, true)
-                                markSynced()
-                                if (result.usedUrl != picoBaseUrl) {
-                                    picoBaseUrl = result.usedUrl
-                                    savePicoBaseUrl(context, result.usedUrl)
-                                }
-                                fetchNote = "Fetched ${result.lights.size} lights from the chart"
-                            }
-                            is PicoLighthousesApi.FetchResult.Error ->
-                                fetchNote = "Chart not reached — using the list on this phone"
-                        }
                     }
                     val navColors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Navy,

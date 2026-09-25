@@ -33,7 +33,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.46"
+FIRMWARE_VERSION = "0.6.47"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -191,7 +191,8 @@ sleep_cfg = {
     "sleep_at_minute": 0,
     "wake_at_hour": 6,
     "wake_at_minute": 0,
-    "timezone_offset_hours": -5,
+    "timezone": "central",
+    "timezone_offset_hours": -6,
     "weekend_mode_enabled": False,
     "weekend_off_weekday": 4,
     "weekend_off_hour": 18,
@@ -295,6 +296,12 @@ def load_config():
     for k in sleep_cfg:
         if k in cfg:
             sleep_cfg[k] = cfg[k]
+    try:
+        import wifi_manager
+        sleep_cfg["timezone"] = wifi_manager.timezone_id(sleep_cfg)
+        sleep_cfg["timezone_offset_hours"] = wifi_manager.timezone_offset_hours(sleep_cfg)
+    except Exception:
+        sleep_cfg["timezone"] = sleep_cfg.get("timezone") or "central"
     print("Display", DISPLAY_TYPE, "show", LIGHT_SHOW, "flash", TOUR_NORMAL_MS, "step", TOUR_STEP_MS, "scroll", MATRIX_SCROLL, "speed", MATRIX_SCROLL_SPEED, "times", SCROLL_TIMES, "bright", MIN_BRIGHTNESS, "-", MAX_BRIGHTNESS)
     if old_min != MIN_BRIGHTNESS or old_max != MAX_BRIGHTNESS:
         _ldr_filt = None
@@ -928,8 +935,10 @@ def station_for(lh):
 
 
 def local_parts():
-    """Local weekday (0=Mon), hour, minute using timezone_offset_hours from UTC."""
-    t = time.gmtime(time.time() + int(sleep_cfg.get("timezone_offset_hours", -5)) * 3600)
+    """Local weekday (0=Mon), hour, minute using Central/Eastern and US DST."""
+    import wifi_manager
+    off = int(wifi_manager.timezone_offset_hours(sleep_cfg))
+    t = time.gmtime(time.time() + off * 3600)
     return t[6], t[3], t[4]
 
 

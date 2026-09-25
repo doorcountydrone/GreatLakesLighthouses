@@ -100,7 +100,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Step(
                     title = "3. Set your lights (Lights / Lighthouses)",
-                    body = "Tap Fetch from chart to see what is already on the chart. A finished Door County chart already has Kewaunee through Rock Island. Save to chart writes your list. List order is the order of the lights on the strip, south to north.",
+                    body = "The app keeps the last list on this phone. Work on it offline, then Save to chart when you are on the same Wi-Fi. Fetch from chart only if you want to replace the phone list with what is already on the strip. A finished Door County chart already has Kewaunee through Rock Island. List order is the order of the lights on the strip, south to north.",
                 )
             }
         }
@@ -115,7 +115,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
         HelpCard(
             title = "Your light list",
             body = "• Chart address: tap Find chart, or Fetch / Save / Identify. The app tries the box, the last home IP it used, and 192.168.4.1. On success it fills in the working address. LED 1 is the first light on the strip.\n\n" +
-                "• Fetch from chart / Reload: loads the list that is already on the chart.\n\n" +
+                "• Fetch from chart / Reload: loads the list that is already on the chart and replaces the list on this phone. The app does not do that when it opens.\n\n" +
                 "• Save to chart / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights. The app warns if you leave Lights or Fetch again with unsaved changes.\n\n" +
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
                 "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
@@ -160,7 +160,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
                 "• Optional LED matrix (8x32 WS2812): data on GPIO 1, 5 V and common ground — not from pin 18. Copy led_matrix.py onto the chart. Light names use flight-category color; weather codes use MetarMap colors.\n\n" +
                 "• Refresh seconds is how often the chart checks online (30 to 3600). 300 is every 5 minutes.\n\n" +
                 "• Beacon pulse on clear weather is a gentle brightness pulse when there is no rain, fog, snow, or similar.\n\n" +
-                "• Sleep turns the lights off and on each night. Set the time offset first (Central: -6 in winter, -5 in daylight saving. Eastern: -5 / -4).\n\n" +
+                "• Sleep turns the lights off and on each night. Pick Central or Eastern; daylight saving switches by itself (second Sunday in March through first Sunday in November).\n\n" +
                 "• Weekend / long off is an extra off stretch, for example Friday evening to Monday morning. It works together with nightly sleep.\n\n" +
                 "• Save writes the settings. Save & reboot is the sure way after you change Wi-Fi.\n\n" +
                 "In the browser, Chart settings always uses Save & Reboot.",

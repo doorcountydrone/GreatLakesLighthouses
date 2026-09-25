@@ -15,6 +15,9 @@
 .cxx
 local.properties
 secrets.properties
+keystore.properties
+*.jks
+*.keystore
 tools/wikidata_lh.json
 tools/overpass_lm.json
 tools/uscg_d9/

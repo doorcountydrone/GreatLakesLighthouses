@@ -45,7 +45,7 @@ See `pico/WIRING.txt`. Minimum:
    - `pico/lighthouses.json`
 3. Power the board. On first boot it opens **GreatLakes-Setup** (password `door1234`).
 4. Join that network on your phone and open **http://192.168.4.1**.
-5. Enter home Wi-Fi, LED count, brightness, timezone (`-6` Central standard, `-5` daylight), then **Save & Reboot**.
+5. Enter home Wi-Fi, LED count, brightness, time zone (Central or Eastern; daylight saving is automatic), then **Save & Reboot**.
 6. After reboot the strip chases south→north in each light’s color, then runs the real flash patterns.
 
 On the home LAN (and in setup AP mode) the chart serves:

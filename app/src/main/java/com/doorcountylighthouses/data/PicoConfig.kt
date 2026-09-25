@@ -30,7 +30,8 @@ data class PicoConfig(
     val sleepAtMinute: Int = 0,
     val wakeAtHour: Int = 6,
     val wakeAtMinute: Int = 0,
-    val timezoneOffsetHours: Int = -5,
+    val timezone: String = TIMEZONE_CENTRAL,
+    val timezoneOffsetHours: Int = -6,
     val weekendModeEnabled: Boolean = false,
     val weekendOffWeekday: Int = 4,
     val weekendOffHour: Int = 18,
@@ -91,3 +92,21 @@ val LIGHT_SHOW_CHOICES = listOf(
     DisplayChoice("FLASH", "Keep flashing"),
     DisplayChoice("TOUR", "Populate one by one"),
 )
+
+const val TIMEZONE_CENTRAL = "central"
+const val TIMEZONE_EASTERN = "eastern"
+
+val TIMEZONE_CHOICES = listOf(
+    DisplayChoice(TIMEZONE_CENTRAL, "Central — Chicago (DST automatic)"),
+    DisplayChoice(TIMEZONE_EASTERN, "Eastern — New York (DST automatic)"),
+)
+
+fun chartTimezone(raw: String?, offsetHours: Int = -6): String {
+    val s = raw?.trim()?.lowercase()?.replace(' ', '_')?.replace('-', '_').orEmpty()
+    if (s in setOf("central", "america/chicago", "cst", "cdt", "chicago")) return TIMEZONE_CENTRAL
+    if (s in setOf("eastern", "america/new_york", "est", "edt", "new_york")) return TIMEZONE_EASTERN
+    return if (offsetHours == -4) TIMEZONE_EASTERN else TIMEZONE_CENTRAL
+}
+
+fun chartTimezoneStandardOffset(id: String): Int =
+    if (chartTimezone(id) == TIMEZONE_EASTERN) -5 else -6

@@ -11,6 +11,8 @@ import com.doorcountylighthouses.data.TOUR_FLASH_S_MIN
 import com.doorcountylighthouses.data.TOUR_STEP_S_DEFAULT
 import com.doorcountylighthouses.data.TOUR_STEP_S_MAX
 import com.doorcountylighthouses.data.TOUR_STEP_S_MIN
+import com.doorcountylighthouses.data.chartTimezone
+import com.doorcountylighthouses.data.chartTimezoneStandardOffset
 import com.doorcountylighthouses.data.loadPicoLanUrl
 import com.doorcountylighthouses.data.rememberWorkingPicoUrl
 import kotlinx.coroutines.Dispatchers
@@ -204,7 +206,8 @@ class PicoConfigApi(private val context: Context) {
         put("sleep_at_minute", config.sleepAtMinute.coerceIn(0, 59))
         put("wake_at_hour", config.wakeAtHour.coerceIn(0, 23))
         put("wake_at_minute", config.wakeAtMinute.coerceIn(0, 59))
-        put("timezone_offset_hours", config.timezoneOffsetHours.coerceIn(-12, 14))
+        put("timezone", chartTimezone(config.timezone, config.timezoneOffsetHours))
+        put("timezone_offset_hours", chartTimezoneStandardOffset(config.timezone))
         put("weekend_mode_enabled", config.weekendModeEnabled)
         put("weekend_off_weekday", config.weekendOffWeekday.coerceIn(0, 6))
         put("weekend_off_hour", config.weekendOffHour.coerceIn(0, 23))
@@ -246,7 +249,14 @@ class PicoConfigApi(private val context: Context) {
         sleepAtMinute = json.intLoose("sleep_at_minute", 0).coerceIn(0, 59),
         wakeAtHour = json.intLoose("wake_at_hour", 6).coerceIn(0, 23),
         wakeAtMinute = json.intLoose("wake_at_minute", 0).coerceIn(0, 59),
-        timezoneOffsetHours = json.intLoose("timezone_offset_hours", -5).coerceIn(-12, 14),
+        timezone = run {
+            val offset = json.intLoose("timezone_offset_hours", -6).coerceIn(-12, 14)
+            chartTimezone(json.optString("timezone"), offset)
+        },
+        timezoneOffsetHours = run {
+            val offset = json.intLoose("timezone_offset_hours", -6).coerceIn(-12, 14)
+            chartTimezoneStandardOffset(chartTimezone(json.optString("timezone"), offset))
+        },
         weekendModeEnabled = json.optBoolean("weekend_mode_enabled", false),
         weekendOffWeekday = json.intLoose("weekend_off_weekday", 4).coerceIn(0, 6),
         weekendOffHour = json.intLoose("weekend_off_hour", 18).coerceIn(0, 23),

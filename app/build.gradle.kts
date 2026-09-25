@@ -6,6 +6,19 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+fun loadGithubKeystore(): Properties? {
+    val file = rootProject.file("keystore.properties")
+    if (!file.exists()) return null
+    val props = Properties()
+    file.inputStream().use { props.load(it) }
+    val store = props.getProperty("storeFile")?.trim().orEmpty()
+    if (store.isEmpty() || !rootProject.file(store).isFile) return null
+    if (props.getProperty("storePassword").isNullOrBlank()) return null
+    if (props.getProperty("keyAlias").isNullOrBlank()) return null
+    if (props.getProperty("keyPassword").isNullOrBlank()) return null
+    return props
+}
+
 android {
     namespace = "com.doorcountylighthouses"
     compileSdk = 35
@@ -14,8 +27,8 @@ android {
         applicationId = "com.doorcountylighthouses"
         minSdk = 30
         targetSdk = 34
-        versionCode = 13
-        versionName = "1.12"
+        versionCode = 15
+        versionName = "1.14"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val mapsApiKey = loadMapsApiKey()
@@ -23,13 +36,33 @@ android {
         buildConfigField("boolean", "HAS_MAPS_KEY", if (mapsApiKey.isNotEmpty()) "true" else "false")
     }
 
+    val githubKeys = loadGithubKeystore()
+    if (githubKeys != null) {
+        signingConfigs {
+            create("github") {
+                storeFile = rootProject.file(githubKeys.getProperty("storeFile"))
+                storePassword = githubKeys.getProperty("storePassword")
+                keyAlias = githubKeys.getProperty("keyAlias")
+                keyPassword = githubKeys.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (githubKeys != null) {
+                signingConfig = signingConfigs.getByName("github")
+            }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (githubKeys != null) {
+                signingConfig = signingConfigs.getByName("github")
+            }
         }
     }
     compileOptions {
@@ -42,6 +75,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    lint {
+        checkReleaseBuilds = false
     }
 }
 

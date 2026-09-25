@@ -37,7 +37,8 @@ DEFAULT_SLEEP = {
     "sleep_at_minute": 0,
     "wake_at_hour": 6,
     "wake_at_minute": 0,
-    "timezone_offset_hours": -5,
+    "timezone": "central",
+    "timezone_offset_hours": -6,
     "weekend_mode_enabled": False,
     "weekend_off_weekday": 4,
     "weekend_off_hour": 18,
@@ -48,6 +49,78 @@ DEFAULT_SLEEP = {
 }
 
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+# US zones: standard offset, daylight offset. DST is 2nd Sunday March → 1st Sunday November.
+TZ_ZONES = {
+    "central": (-6, -5),
+    "eastern": (-5, -4),
+}
+
+
+def _days_from_civil(y, m, d):
+    y = int(y)
+    m = int(m)
+    d = int(d)
+    y -= 1 if m <= 2 else 0
+    era = y // 400
+    yoe = y - era * 400
+    doy = (153 * (m + (-3 if m > 2 else 9)) + 2) // 5 + d - 1
+    doe = yoe * 365 + yoe // 4 - yoe // 100 + doy
+    return era * 146097 + doe - 719468
+
+
+def _unix_utc(y, m, d, h, mi):
+    return _days_from_civil(y, m, d) * 86400 + int(h) * 3600 + int(mi) * 60
+
+
+def _nth_sunday(year, month, n):
+    # 1970-01-01 Thursday; Monday = 0 to match utime.
+    w = (_days_from_civil(year, month, 1) + 3) % 7
+    first_sun = 1 + (6 - w) % 7
+    return first_sun + (int(n) - 1) * 7
+
+
+def timezone_id(cfg):
+    raw = str((cfg or {}).get("timezone") or "").strip().lower().replace(" ", "_")
+    if raw in ("central", "america/chicago", "cst", "cdt", "chicago"):
+        return "central"
+    if raw in ("eastern", "america/new_york", "est", "edt", "new_york"):
+        return "eastern"
+    try:
+        off = int(float((cfg or {}).get("timezone_offset_hours", -6)))
+    except Exception:
+        off = -6
+    if off == -4:
+        return "eastern"
+    return "central"
+
+
+def timezone_offset_hours(cfg, utc_secs=None):
+    zid = timezone_id(cfg)
+    std, dst = TZ_ZONES[zid]
+    if utc_secs is None:
+        utc_secs = time.time()
+    try:
+        utc_secs = int(utc_secs)
+        y = time.gmtime(utc_secs)[0]
+        start = _unix_utc(y, 3, _nth_sunday(y, 3, 2), 2 - std, 0)
+        end = _unix_utc(y, 11, _nth_sunday(y, 11, 1), 2 - dst, 0)
+        if start <= utc_secs < end:
+            return dst
+    except Exception:
+        pass
+    return std
+
+
+def timezone_options(selected):
+    sel = timezone_id({"timezone": selected})
+    parts = []
+    for zid, label in (
+        ("central", "Central — Chicago (DST automatic)"),
+        ("eastern", "Eastern — New York (DST automatic)"),
+    ):
+        mark = " selected" if zid == sel else ""
+        parts.append('<option value="%s"%s>%s</option>' % (zid, mark, label))
+    return "".join(parts)
 DISPLAY_TYPES = (
     ("NONE", "LED strip only"),
     ("OLED", "OLED (128×64)"),
@@ -471,7 +544,6 @@ def apply_fields(cfg, src):
         ("sleep_at_minute", 0, 59),
         ("wake_at_hour", 0, 23),
         ("wake_at_minute", 0, 59),
-        ("timezone_offset_hours", -12, 14),
         ("cycle_delay", 30, 3600),
         ("tour_flash_s", 10, 1800),
         ("tour_step_s", 2, 120),
@@ -486,6 +558,17 @@ def apply_fields(cfg, src):
     ):
         if key in src and str(src[key]) != "":
             cfg[key] = _clamp(int(float(src[key])), lo, hi)
+    if "timezone" in src and str(src["timezone"]) != "":
+        cfg["timezone"] = timezone_id({"timezone": src["timezone"]})
+    elif "timezone_offset_hours" in src and str(src["timezone_offset_hours"]) != "":
+        try:
+            off = _clamp(int(float(src["timezone_offset_hours"])), -12, 14)
+        except Exception:
+            off = -6
+        cfg["timezone"] = timezone_id({"timezone_offset_hours": off})
+    else:
+        cfg["timezone"] = timezone_id(cfg)
+    cfg["timezone_offset_hours"] = timezone_offset_hours(cfg)
     return cfg
 
 
@@ -582,6 +665,8 @@ def merge_defaults(cfg):
         out["tour_step_s"] = _clamp(int(out.get("tour_step_s", DEFAULT_TOUR_STEP_S)), 2, 120)
     except Exception:
         out["tour_step_s"] = DEFAULT_TOUR_STEP_S
+    out["timezone"] = timezone_id(out)
+    out["timezone_offset_hours"] = timezone_offset_hours(out)
     return out
 
 
@@ -795,9 +880,9 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 <input name="cycle_delay" type="number" min="30" max="3600" value="__CYCLE__">
 <label><input name="beacon_pulse" type="checkbox" value="1" __BEACON__ style="width:auto"> Beacon pulse on clear weather</label>
 <h2>Sleep schedule</h2>
-<label>Time offset (hours from UTC)</label>
-<p class="note">Central: -6 standard, -5 daylight. Eastern: -5 / -4. The chart sets its clock after it joins Wi-Fi.</p>
-<input name="timezone_offset_hours" type="number" min="-12" max="14" value="__TZ__">
+<label>Time zone</label>
+<p class="note">Sleep times are local. US daylight saving starts the second Sunday in March and ends the first Sunday in November. The chart sets its clock after it joins Wi-Fi.</p>
+<select name="timezone">__TZ_OPTS__</select>
 <label><input name="sleep_enabled" type="checkbox" value="1" __SLEEP__ style="width:auto"> Turn LEDs off at set times</label>
 <div class="row">
 <div><label>Off hour</label><input name="sleep_at_hour" type="number" min="0" max="23" value="__SH__"></div>
@@ -1135,7 +1220,7 @@ say('Loaded '+lights.length+' lights');
     page = page.replace("__MAXB__", _html_attr(max_b))
     page = page.replace("__CYCLE__", _html_attr(cfg.get("cycle_delay", 300)))
     page = page.replace("__BEACON__", checked_beacon)
-    page = page.replace("__TZ__", _html_attr(cfg.get("timezone_offset_hours", -5)))
+    page = page.replace("__TZ_OPTS__", timezone_options(cfg.get("timezone", "central")))
     page = page.replace("__SLEEP__", checked_sleep)
     page = page.replace("__SH__", _html_attr(cfg.get("sleep_at_hour", 22)))
     page = page.replace("__SM__", _html_attr(cfg.get("sleep_at_minute", 0)))

@@ -70,6 +70,10 @@ import com.doorcountylighthouses.data.PicoConfig
 import com.doorcountylighthouses.data.SCROLL_TIMES_DEFAULT
 import com.doorcountylighthouses.data.SCROLL_TIMES_MAX
 import com.doorcountylighthouses.data.SCROLL_TIMES_MIN
+import com.doorcountylighthouses.data.TIMEZONE_CHOICES
+import com.doorcountylighthouses.data.TIMEZONE_CENTRAL
+import com.doorcountylighthouses.data.TIMEZONE_EASTERN
+import com.doorcountylighthouses.data.chartTimezone
 import com.doorcountylighthouses.data.TOUR_FLASH_S_DEFAULT
 import com.doorcountylighthouses.data.TOUR_FLASH_S_MAX
 import com.doorcountylighthouses.data.TOUR_FLASH_S_MIN
@@ -113,7 +117,8 @@ fun PicoSettingsScreen(
     var maxBrightness by remember { mutableFloatStateOf(18f) }
     var cycleDelay by remember { mutableStateOf("300") }
     var beaconPulse by remember { mutableStateOf(true) }
-    var timezoneOffsetHours by remember { mutableStateOf("-5") }
+    var timezone by remember { mutableStateOf(TIMEZONE_CENTRAL) }
+    var timezoneMenuExpanded by remember { mutableStateOf(false) }
     var sleepEnabled by remember { mutableStateOf(false) }
     var sleepAtHour by remember { mutableStateOf("22") }
     var sleepAtMinute by remember { mutableStateOf("0") }
@@ -160,7 +165,7 @@ fun PicoSettingsScreen(
         maxBrightness = cfg.maxBrightness.toFloat().coerceIn(2f, BRIGHTNESS_SLIDER_MAX.toFloat())
         cycleDelay = cfg.cycleDelay.coerceIn(CYCLE_DELAY_MIN, CYCLE_DELAY_MAX).toString()
         beaconPulse = cfg.beaconPulse
-        timezoneOffsetHours = cfg.timezoneOffsetHours.toString()
+        timezone = chartTimezone(cfg.timezone, cfg.timezoneOffsetHours)
         sleepEnabled = cfg.sleepEnabled
         sleepAtHour = cfg.sleepAtHour.toString()
         sleepAtMinute = cfg.sleepAtMinute.toString()
@@ -199,7 +204,8 @@ fun PicoSettingsScreen(
         sleepAtMinute = sleepAtMinute.toIntOrNull() ?: 0,
         wakeAtHour = wakeAtHour.toIntOrNull() ?: 6,
         wakeAtMinute = wakeAtMinute.toIntOrNull() ?: 0,
-        timezoneOffsetHours = timezoneOffsetHours.toIntOrNull() ?: -5,
+        timezone = timezone,
+        timezoneOffsetHours = if (timezone == TIMEZONE_EASTERN) -5 else -6,
         weekendModeEnabled = weekendModeEnabled,
         weekendOffWeekday = weekendOffWeekday,
         weekendOffHour = weekendOffHour.toIntOrNull() ?: 18,
@@ -639,6 +645,8 @@ fun PicoSettingsScreen(
         SettingsSection(
             title = "Sleep",
             summary = buildString {
+                append(TIMEZONE_CHOICES.firstOrNull { it.id == timezone }?.label?.substringBefore(" —") ?: "Central")
+                append(" · ")
                 if (sleepEnabled) append("Off ${sleepAtHour.ifBlank { "22" }}:${sleepAtMinute.padStart(2, '0').ifBlank { "00" }}")
                 else append("Nightly sleep off")
                 if (weekendModeEnabled) append(" · weekend block on")
@@ -647,25 +655,42 @@ fun PicoSettingsScreen(
             onToggle = { sleepOpen = !sleepOpen },
         ) {
             Text(
-                text = "Times use the UTC offset. The chart sets its clock after it joins Wi-Fi.",
+                text = "Sleep times are local. Daylight saving switches automatically (second Sunday in March through first Sunday in November).",
                 style = MaterialTheme.typography.bodySmall,
                 color = Fog,
             )
-            OutlinedTextField(
-                value = timezoneOffsetHours,
-                onValueChange = { s ->
-                    if (s.isEmpty() || s == "-" || s == "+" || s.toIntOrNull()?.let { it in -12..14 } == true) {
-                        timezoneOffsetHours = s
+            ExposedDropdownMenuBox(
+                expanded = timezoneMenuExpanded,
+                onExpandedChange = { timezoneMenuExpanded = it },
+            ) {
+                OutlinedTextField(
+                    value = TIMEZONE_CHOICES.firstOrNull { it.id == timezone }?.label ?: "Central — Chicago (DST automatic)",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Time zone") },
+                    supportingText = { Text("Door County is Central. Buffalo / Cleveland / Toronto are Eastern.") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(timezoneMenuExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    enabled = !isLoading,
+                    colors = settingsFieldColors(),
+                )
+                ExposedDropdownMenu(
+                    expanded = timezoneMenuExpanded,
+                    onDismissRequest = { timezoneMenuExpanded = false },
+                ) {
+                    TIMEZONE_CHOICES.forEach { choice ->
+                        DropdownMenuItem(
+                            text = { Text(choice.label) },
+                            onClick = {
+                                timezone = choice.id
+                                timezoneMenuExpanded = false
+                            },
+                        )
                     }
-                },
-                label = { Text("Time offset (hours from UTC)") },
-                supportingText = { Text("Central: -6 standard, -5 daylight. Eastern: -5 / -4.") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                colors = settingsFieldColors(),
-            )
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
