@@ -33,7 +33,7 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.47"
+FIRMWARE_VERSION = "0.6.48"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -1112,7 +1112,7 @@ def frame_color(lh, now_ms):
 def start_identify(led_i, ms=8000):
     global _identify_led, _identify_until
     led_i = int(led_i)
-    hold = _clamp(int(ms), 500, 30000)
+    hold = _clamp(int(ms), 500, 4000)
     _identify_led = led_i
     _identify_until = time.ticks_add(time.ticks_ms(), hold)
     paint_identify(led_i)

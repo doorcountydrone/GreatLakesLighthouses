@@ -350,7 +350,7 @@ def _light_rgb(code):
 def start_identify(led_i, ms=8000):
     global _identify_led, _identify_until, _identify_rgb
     led_i = int(led_i)
-    hold = _clamp(int(ms), 500, 30000)
+    hold = _clamp(int(ms), 500, 4000)
     _identify_led = led_i
     _identify_until = time.ticks_add(time.ticks_ms(), hold)
     _identify_rgb = LIGHT_RGB["W"]
@@ -1006,9 +1006,9 @@ function render(){
 }
 function identify(i){
  say('Lighting LED '+(i+1)+'...');
- fetch('/identify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({led:i,ms:8000}),cache:'no-store'})
+ fetch('/identify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({led:i,ms:4000}),cache:'no-store'})
   .then(function(r){if(!r.ok) throw new Error('HTTP '+r.status); return r.json();})
-  .then(function(data){say(data.identifying?'LED '+(i+1)+' only for '+Math.round((data.ms||8000)/1000)+'s':'Identify cleared');})
+  .then(function(data){say(data.identifying?'LED '+(i+1)+' only for '+Math.round((data.ms||4000)/1000)+'s':'Identify cleared');})
   .catch(function(e){say('Identify failed: '+e);});
 }
 function move(i,d){var j=i+d; if(j<0||j>=lights.length) return; var t=lights[i]; lights[i]=lights[j]; lights[j]=t; render();}
