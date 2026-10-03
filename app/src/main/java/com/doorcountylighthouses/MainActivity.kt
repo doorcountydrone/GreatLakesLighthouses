@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     var listDirty by remember { mutableStateOf(false) }
+                    var chartLedCount by remember { mutableStateOf<Int?>(null) }
                     var pendingLeaveTab by remember { mutableStateOf<Int?>(null) }
                     val persistLights: (List<Lighthouse>, Boolean) -> Unit = { next, save ->
                         val numbered = LighthouseRepository.renumber(next)
@@ -153,6 +154,8 @@ class MainActivity : ComponentActivity() {
                                     onLightsChange = persistLights,
                                     onSyncedWithChart = markSynced,
                                     listDirty = listDirty,
+                                    chartLedCount = chartLedCount,
+                                    onChartLedCount = { chartLedCount = it },
                                     initialStatus = fetchNote,
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -173,6 +176,7 @@ class MainActivity : ComponentActivity() {
                                         picoBaseUrl = it
                                         savePicoBaseUrl(context, it)
                                     },
+                                    onNumLedsKnown = { chartLedCount = it },
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 else -> HelpScreen(modifier = Modifier.fillMaxSize())

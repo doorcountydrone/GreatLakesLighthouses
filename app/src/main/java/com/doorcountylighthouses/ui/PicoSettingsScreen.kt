@@ -92,6 +92,7 @@ import kotlinx.coroutines.launch
 fun PicoSettingsScreen(
     picoBaseUrl: String,
     onPicoBaseUrlChange: (String) -> Unit,
+    onNumLedsKnown: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current.applicationContext
@@ -181,6 +182,7 @@ fun PicoSettingsScreen(
         firmwareVersion = cfg.firmwareVersion
         updateAvailable = cfg.updateAvailable
         updateVersion = cfg.updateVersion
+        if (cfg.numLeds >= 1) onNumLedsKnown(cfg.numLeds)
     }
 
     fun currentConfig() = PicoConfig(
@@ -318,6 +320,7 @@ fun PicoSettingsScreen(
                     when (val result = PicoDiscovery.find(context, picoBaseUrl)) {
                         is PicoDiscovery.Result.Found -> {
                             onPicoBaseUrlChange(result.url)
+                            result.numLeds?.let(onNumLedsKnown)
                             statusMessage = result.message
                         }
                         is PicoDiscovery.Result.Error -> statusMessage = result.message

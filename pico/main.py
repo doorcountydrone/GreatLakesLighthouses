@@ -8,7 +8,7 @@ import network
 import socket
 import utime as time
 
-machine.freq(230_000_000)
+machine.freq(250_000_000)
 
 try:
     import urequests
@@ -33,7 +33,13 @@ except ImportError:
     fonts_available = False
     print("OLED fonts skipped (copy writer.py and sans18.py)")
 
-FIRMWARE_VERSION = "0.6.48"
+try:
+    import sans20
+    sans20_available = fonts_available
+except ImportError:
+    sans20_available = False
+
+FIRMWARE_VERSION = "0.6.51"
 CONFIG_FILE = "wifi_config.json"
 LIGHTHOUSE_FILE = "lighthouses.json"
 FORCE_AP_BUTTON_PIN = 15
@@ -51,8 +57,10 @@ OLED_SDA_PIN = 16
 OLED_SCL_PIN = 17
 OLED_VCC_PIN = 18
 OLED_GND_PIN = 19
-# Yellow band is y=0–15. sans18 is ~18px, so "g" sits one row into blue at y=0.
+# Yellow band is y=0–15. Title stays sans18 so "g" sits one row into blue at y=0.
 OLED_TITLE_Y = -1
+# Blue band is y=16–63. Second line uses sans20 when that file is on the Pico.
+OLED_BODY_Y = 32
 MATRIX_IDLE_MS = 15000
 TOUR_NORMAL_MS = 180000
 TOUR_DARK_MS = 2000
@@ -1482,7 +1490,7 @@ def _announce_ota():
         try:
             oled.fill(0)
             _oled_print_centered(OLED_TITLE_Y, "UPDATE")
-            _oled_print_centered(32, "PRESS BTN")
+            _oled_print_centered(OLED_BODY_Y, "PRESS BTN")
             oled.show()
         except Exception:
             pass
@@ -1630,7 +1638,7 @@ def _handle_conn(conn):
                 ms = start_identify(int(led), hold)
                 _http_send(conn, "application/json", json.dumps({"ok": True, "identifying": True, "led": int(led), "ms": ms}))
         elif method == "GET" and path == "/lighthouses":
-            _http_send(conn, "application/json", json.dumps({"ok": True, "lighthouses": lighthouse_payload()}))
+            _http_send(conn, "application/json", json.dumps({"ok": True, "lighthouses": lighthouse_payload(), "num_leds": NUM_LEDS}))
         elif method == "POST" and path == "/lighthouses":
             try:
                 import wifi_manager
@@ -1643,7 +1651,7 @@ def _handle_conn(conn):
                     items = json.loads(items)
                 count = apply_lighthouse_list(items)
                 if req_body and req_body.lstrip()[:1] == "{":
-                    _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "message": "saved"}))
+                    _http_send(conn, "application/json", json.dumps({"ok": True, "count": count, "num_leds": NUM_LEDS, "message": "saved"}))
                 else:
                     import wifi_manager
                     _http_send(conn, "text/html; charset=utf-8", wifi_manager.setup_page(update_available, (update_info or {}).get("version", ""), FIRMWARE_VERSION))
@@ -1658,6 +1666,7 @@ def _handle_conn(conn):
                 "last_fetch": status.get("last_fetch"),
                 "stations": list((status.get("stations") or {}).keys()),
                 "lights": len(lighthouses),
+                "num_leds": NUM_LEDS,
                 "update_available": update_available,
                 "update_version": (update_info or {}).get("version", "") if update_available else "",
             }))
@@ -1740,6 +1749,7 @@ def _handle_conn(conn):
 
 oled = None
 _oled_wri = None
+_oled_wri_body = None
 _oled_last_ms = 0
 _oled_msgs = []
 _oled_msg_i = 0
@@ -1861,8 +1871,9 @@ def refresh_matrix():
 
 
 def init_oled():
-    global oled, _oled_wri
+    global oled, _oled_wri, _oled_wri_body
     _oled_wri = None
+    _oled_wri_body = None
     if DISPLAY_TYPE != "OLED":
         try:
             machine.Pin(OLED_VCC_PIN, machine.Pin.OUT).value(0)
@@ -1879,38 +1890,50 @@ def init_oled():
         oled = ssd1306.SSD1306_I2C(128, 64, i2c)
         oled.contrast(128)
         oled.fill(0)
-        # Dual-color 128x64: yellow y=0-15, blue y=16-63. sans18 is ~18px.
+        # Dual-color 128x64: yellow y=0-15 sans18, blue y=16-63 sans20.
         _oled_print_centered(OLED_TITLE_Y, "Lighthouses")
-        _oled_print(32, "v" + FIRMWARE_VERSION)
+        _oled_print(OLED_BODY_Y, "v" + FIRMWARE_VERSION)
         oled.show()
-        print("OLED on SDA", OLED_SDA_PIN, "SCL", OLED_SCL_PIN, "font", "sans18" if fonts_available else "8x8")
+        body = "sans20" if sans20_available else ("sans18" if fonts_available else "8x8")
+        print("OLED on SDA", OLED_SDA_PIN, "SCL", OLED_SCL_PIN, "title sans18 body", body)
     except Exception as e:
         oled = None
         _oled_wri = None
+        _oled_wri_body = None
         print("OLED skipped:", e)
 
 
-def _oled_writer():
-    global _oled_wri
-    if not fonts_available or oled is None:
-        return None
-    if _oled_wri is None:
+def _oled_make_writer(font):
+    try:
         try:
-            try:
-                _oled_wri = writer.Writer(oled, sans18, verbose=False)
-            except TypeError:
-                _oled_wri = writer.Writer(oled, sans18)
-            if hasattr(_oled_wri, "row_clip"):
-                _oled_wri.row_clip = True
-        except Exception as e:
-            print("OLED writer:", e)
-            return None
+            w = writer.Writer(oled, font, verbose=False)
+        except TypeError:
+            w = writer.Writer(oled, font)
+        if hasattr(w, "row_clip"):
+            w.row_clip = True
+        return w
+    except Exception as e:
+        print("OLED writer:", e)
+        return None
+
+
+def _oled_writer(y=OLED_TITLE_Y):
+    global _oled_wri, _oled_wri_body
+    if oled is None or not fonts_available:
+        return None
+    if y >= 16 and sans20_available:
+        if _oled_wri_body is None:
+            _oled_wri_body = _oled_make_writer(sans20)
+        if _oled_wri_body is not None:
+            return _oled_wri_body
+    if _oled_wri is None:
+        _oled_wri = _oled_make_writer(sans18)
     return _oled_wri
 
 
 def _oled_print(y, text):
     text = str(text)
-    w = _oled_writer()
+    w = _oled_writer(y)
     if w is None:
         oled.text(text[:16], 0, y, 1)
         return
@@ -1926,8 +1949,8 @@ def _oled_print(y, text):
     w.printstring(text)
 
 
-def _oled_ch_w(ch):
-    w = _oled_writer()
+def _oled_ch_w(ch, y=OLED_TITLE_Y):
+    w = _oled_writer(y)
     if w is not None:
         try:
             n = w.stringlen(ch)
@@ -1938,20 +1961,20 @@ def _oled_ch_w(ch):
     return 11 if fonts_available else 8
 
 
-def _oled_str_w(text):
+def _oled_str_w(text, y=OLED_TITLE_Y):
     n = 0
     for ch in text:
-        n += _oled_ch_w(ch)
+        n += _oled_ch_w(ch, y)
     return n
 
 
 def _oled_print_at(x, y, text):
     # Draw only glyphs that fit on this row. Writer wraps a too-wide
     # character onto the next line (left side, under the scroll).
-    w = _oled_writer()
+    w = _oled_writer(y)
     cx = x
     for ch in text:
-        cw = _oled_ch_w(ch)
+        cw = _oled_ch_w(ch, y)
         nxt = cx + cw
         if nxt <= 0:
             cx = nxt
@@ -1972,7 +1995,7 @@ def _oled_print_at(x, y, text):
 
 def _oled_print_centered(y, text):
     text = str(text)
-    tw = _oled_str_w(text)
+    tw = _oled_str_w(text, y)
     x = 0 if tw >= 128 else (128 - tw) // 2
     _oled_print_at(x, y, text)
 
@@ -1980,7 +2003,7 @@ def _oled_print_centered(y, text):
 def _oled_draw_title(title):
     global _oled_title_x
     title = str(title)
-    tw = _oled_str_w(title)
+    tw = _oled_str_w(title, OLED_TITLE_Y)
     if tw <= 128:
         _oled_print_centered(OLED_TITLE_Y, title)
         return
@@ -2061,16 +2084,16 @@ def refresh_oled():
             _oled_title_x = 128
             _oled_pass = 0
         title, msg = _oled_msgs[_oled_msg_i]
-        tw = _oled_str_w(msg)
+        tw = _oled_str_w(msg, OLED_BODY_Y)
         oled.fill(0)
         _oled_draw_title(title)
         if _oled_x < 128 and _oled_x + tw > 0:
-            _oled_print_at(_oled_x, 32, msg)
+            _oled_print_at(_oled_x, OLED_BODY_Y, msg)
         oled.show()
         _oled_x -= max(2, MATRIX_SCROLL_SPEED)
         if _oled_x + tw < 0:
             oled.fill(0)
-            if _oled_str_w(title) <= 128:
+            if _oled_str_w(title, OLED_TITLE_Y) <= 128:
                 _oled_print_centered(OLED_TITLE_Y, title)
             else:
                 _oled_print_at(0, OLED_TITLE_Y, title)

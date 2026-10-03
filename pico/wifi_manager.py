@@ -806,7 +806,7 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 .tiny{width:auto;margin:0;padding:6px 8px;background:#0B1F3A;color:#F4EBD0}
 .use{display:flex;flex-direction:column;align-items:center;font-size:.7rem;color:#A8B5C4}
 .use input{width:auto;margin:0}
-#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);padding:16px;overflow:auto;z-index:2}
+#overlay{display:none;pointer-events:none;position:fixed;inset:0;background:rgba(0,0,0,.55);padding:16px;overflow:auto;z-index:2}
 #overlay .box{background:#0B1F3A;border:1px solid #E8A838;border-radius:10px;padding:16px;max-width:520px;margin:20px auto}
 #catKinds,#catChips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 #catKinds .chip,#catChips .chip{width:auto;margin:0;padding:6px 10px;background:#16324F;color:#F4EBD0;border-radius:999px;font-size:.8rem;font-weight:normal}
@@ -815,7 +815,8 @@ button{margin-top:16px;width:100%;padding:12px;background:#E8A838;border:0;borde
 .hit{background:#16324F;border-radius:8px;padding:8px;margin-top:6px}
 .hit.onmap{opacity:.45}
 .status{color:#E8A838;font-size:.85rem;min-height:1.2em}
-#panelSettings,#panelHelp{display:none}
+#panelSettings,#panelHelp{display:none;pointer-events:none}
+#panelHelp iframe{pointer-events:none}
 </style></head><body>
 <h1>Great Lakes Lighthouses</h1>
 <p>Open this page on the chart (setup: 192.168.4.1, or the chart LAN IP).</p>
@@ -917,7 +918,7 @@ __UPDATE_BANNER__
 <div id="panelHelp">
 <iframe id="helpFrame" title="Help" style="width:100%;min-height:75vh;border:0;background:#0B1F3A"></iframe>
 </div>
-<div id="overlay" onclick="if(event.target.id==='overlay')closeModal()">
+<div id="overlay" style="display:none;pointer-events:none" onclick="if(event.target.id==='overlay')closeModal()">
 <div class="box" id="modalBox"></div>
 </div>
 <script>
@@ -938,13 +939,17 @@ var PRESETS=[
 ];
 function showTab(name){
  document.getElementById('panelLights').style.display=name==='lights'?'block':'none';
+ document.getElementById('panelLights').style.pointerEvents=name==='lights'?'auto':'none';
  document.getElementById('panelSettings').style.display=name==='settings'?'block':'none';
+ document.getElementById('panelSettings').style.pointerEvents=name==='settings'?'auto':'none';
  document.getElementById('panelHelp').style.display=name==='help'?'block':'none';
+ document.getElementById('panelHelp').style.pointerEvents=name==='help'?'auto':'none';
+ var fr=document.getElementById('helpFrame');
+ if(fr) fr.style.pointerEvents=name==='help'?'auto':'none';
  document.getElementById('tabLights').className=name==='lights'?'on':'';
  document.getElementById('tabSettings').className=name==='settings'?'on':'';
  document.getElementById('tabHelp').className=name==='help'?'on':'';
  if(name==='help'){
-  var fr=document.getElementById('helpFrame');
   if(fr && !fr.getAttribute('src')) fr.src='/help';
  }
 }
@@ -1061,6 +1066,7 @@ function onMap(entry){
 function openCatalog(){
  document.getElementById('modalBox').innerHTML='<h2>Great Lakes catalog</h2><p class="note">Loading...</p>';
  document.getElementById('overlay').style.display='block';
+ document.getElementById('overlay').style.pointerEvents='auto';
  var SHORES=[['Chicago','Indiana / Chicago'],['Wisconsin','Wisconsin / Illinois'],['Green Bay','Green Bay'],['Michigan','Michigan'],['Huron','Lake Huron'],['Huron ON','Canada Huron'],['Georgian','Georgian Bay'],['Channel','North Channel'],['Erie','Lake Erie'],['Erie ON','Canada Erie'],['America','Lake America'],['Ontario ON','Canada Ontario'],['Straits','Straits / North'],['Superior','Lake Superior'],['Superior ON','Canada Superior']];
  function isBuoy(e){
   return ((e.name||'')+' '+(e.short_name||'')).toLowerCase().indexOf('buoy')>=0;
@@ -1186,6 +1192,7 @@ function openCustom(){
  var opts=PRESETS.map(function(p,i){return '<option value="'+i+'">'+esc(p.label)+'</option>';}).join('');
  document.getElementById('modalBox').innerHTML='<h2>Add lighthouse</h2><label>Name</label><input id="cName"><label>Characteristic</label><select id="cPreset">'+opts+'</select><label>Nearby METAR (optional)</label><input id="cMetar" maxlength="4" placeholder="KSUE, KMTW, K3D2"><div class="actions"><button type="button" onclick="addCustom()">Add</button><button type="button" class="tiny" onclick="closeModal()">Cancel</button></div>';
  document.getElementById('overlay').style.display='block';
+ document.getElementById('overlay').style.pointerEvents='auto';
 }
 function addCustom(){
  var name=(document.getElementById('cName').value||'').trim();
@@ -1195,11 +1202,17 @@ function addCustom(){
  lights.push({id:slug(name)+'_'+Date.now()%100000,name:name,short_name:name,led:lights.length,metar:metar,metar_fallback:metar,active:true,skip:false,light:{char:p.char,color:p.color,period_s:p.period_s,on_s:p.on_s.slice(),off_s:p.off_s.slice()}});
  render(); say('Added '+name); closeModal();
 }
-function closeModal(){document.getElementById('overlay').style.display='none';}
+function closeModal(){
+ var el=document.getElementById('overlay');
+ el.style.display='none';
+ el.style.pointerEvents='none';
+}
 if(!Array.isArray(lights)) lights=[];
-showTab('__TAB__');
-render();
-say('Loaded '+lights.length+' lights');
+try{
+ showTab('__TAB__');
+ render();
+ say('Loaded '+lights.length+' lights');
+}catch(e){say('Page error: '+e);}
 </script>
 </body></html>
 """
@@ -1405,7 +1418,7 @@ def run_server(force_ap=False):
             if first.startswith("OPTIONS"):
                 send_options(conn)
             elif first.startswith("GET /status"):
-                st = {"ok": True, "mode": "setup", "name": "GreatLakesLighthouses"}
+                st = {"ok": True, "mode": "setup", "name": "GreatLakesLighthouses", "num_leds": int(num_leds)}
                 try:
                     import sys
                     ver = getattr(sys.modules.get("__main__"), "FIRMWARE_VERSION", None)
@@ -1426,7 +1439,7 @@ def run_server(force_ap=False):
             elif first.startswith("GET /lighthouses-defaults"):
                 send_json_file(conn, "lighthouses_defaults.json", {"ok": False, "lighthouses": []})
             elif first.startswith("GET /lighthouses"):
-                send_json(conn, {"ok": True, "lighthouses": load_lighthouse_list()})
+                send_json(conn, {"ok": True, "lighthouses": load_lighthouse_list(), "num_leds": int(num_leds)})
             elif first.startswith("GET /identify") or first.startswith("POST /identify"):
                 led, hold = parse_identify(request)
                 if led is None or int(led) < 0:
@@ -1447,7 +1460,7 @@ def run_server(force_ap=False):
                         raise ValueError("lighthouses list required")
                     cleaned = save_lighthouse_list(items)
                     if "application/json" in request:
-                        send_json(conn, {"ok": True, "count": len(cleaned), "message": "saved"})
+                        send_json(conn, {"ok": True, "count": len(cleaned), "num_leds": int(num_leds), "message": "saved"})
                     else:
                         send_html(conn, setup_page())
                 except Exception as e:

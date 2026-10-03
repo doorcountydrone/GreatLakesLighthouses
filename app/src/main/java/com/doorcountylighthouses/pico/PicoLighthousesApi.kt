@@ -12,12 +12,12 @@ import java.net.HttpURLConnection
 
 class PicoLighthousesApi(private val context: Context) {
     sealed class FetchResult {
-        data class Success(val lights: List<Lighthouse>, val usedUrl: String) : FetchResult()
+        data class Success(val lights: List<Lighthouse>, val usedUrl: String, val numLeds: Int? = null) : FetchResult()
         data class Error(val message: String) : FetchResult()
     }
 
     sealed class SaveResult {
-        data class Success(val usedUrl: String) : SaveResult()
+        data class Success(val usedUrl: String, val numLeds: Int? = null) : SaveResult()
         data class Error(val message: String) : SaveResult()
     }
 
@@ -117,7 +117,7 @@ class PicoLighthousesApi(private val context: Context) {
                     add(LighthouseRepository.fromJson(array.getJSONObject(i)))
                 }
             }
-            FetchResult.Success(lights, rememberWorkingPicoUrl(context, url))
+            FetchResult.Success(lights, rememberWorkingPicoUrl(context, url), root.optionalPositiveInt("num_leds"))
         } catch (e: Exception) {
             FetchResult.Error(PicoUrls.netError(e))
         } finally {
@@ -140,9 +140,10 @@ class PicoLighthousesApi(private val context: Context) {
             val text = (if (code in 200..299) conn.inputStream else conn.errorStream)
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code in 200..299) {
-                val ok = runCatching { JSONObject(text).optBoolean("ok", true) }.getOrDefault(true)
-                if (ok) SaveResult.Success(rememberWorkingPicoUrl(context, url))
-                else SaveResult.Error(JSONObject(text).optString("message", "Failed"))
+                val json = runCatching { JSONObject(text) }.getOrNull()
+                val ok = json?.optBoolean("ok", true) ?: true
+                if (ok) SaveResult.Success(rememberWorkingPicoUrl(context, url), json?.optionalPositiveInt("num_leds"))
+                else SaveResult.Error(json?.optString("message", "Failed") ?: "Failed")
             } else {
                 SaveResult.Error("HTTP $code")
             }
@@ -152,4 +153,10 @@ class PicoLighthousesApi(private val context: Context) {
             conn?.disconnect()
         }
     }
+}
+
+private fun JSONObject.optionalPositiveInt(key: String): Int? {
+    if (!has(key) || isNull(key)) return null
+    val n = optInt(key, -1)
+    return n.takeIf { it >= 1 }
 }

@@ -88,6 +88,8 @@ fun LighthouseListScreen(
     onLightsChange: (List<Lighthouse>, save: Boolean) -> Unit,
     onSyncedWithChart: () -> Unit = {},
     listDirty: Boolean = false,
+    chartLedCount: Int? = null,
+    onChartLedCount: (Int) -> Unit = {},
     initialStatus: String? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -117,6 +119,7 @@ fun LighthouseListScreen(
                 is PicoLighthousesApi.FetchResult.Success -> {
                     persist(result.lights)
                     onSyncedWithChart()
+                    result.numLeds?.let(onChartLedCount)
                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                     statusMessage = "Fetched ${result.lights.size} lights from the chart"
                 }
@@ -179,6 +182,7 @@ fun LighthouseListScreen(
                         when (val result = PicoDiscovery.find(context, picoBaseUrl)) {
                             is PicoDiscovery.Result.Found -> {
                                 onPicoBaseUrlChange(result.url)
+                                result.numLeds?.let(onChartLedCount)
                                 statusMessage = result.message
                             }
                             is PicoDiscovery.Result.Error -> statusMessage = result.message
@@ -216,6 +220,7 @@ fun LighthouseListScreen(
                                 is PicoLighthousesApi.SaveResult.Success -> {
                                     persist(lights)
                                     onSyncedWithChart()
+                                    onChartLedCount(result.numLeds ?: lights.size)
                                     if (result.usedUrl != picoBaseUrl) onPicoBaseUrlChange(result.usedUrl)
                                     statusMessage = "Saved ${lights.count { !it.skip }} lights to the chart"
                                 }
@@ -259,6 +264,13 @@ fun LighthouseListScreen(
             if (listDirty) {
                 Text(
                     text = "Not saved to the chart — tap Save to chart.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Amber,
+                )
+            }
+            ledCountMismatchMessage(lights.size, chartLedCount)?.let { mismatch ->
+                Text(
+                    text = mismatch,
                     style = MaterialTheme.typography.bodySmall,
                     color = Amber,
                 )
@@ -731,4 +743,14 @@ private fun ledSwatch(code: String): Color = when (code.uppercase()) {
     "R" -> IfrRed
     "G" -> VfrGreen
     else -> Color(0xFFFFECD4)
+}
+
+private fun ledCountMismatchMessage(listSize: Int, chartLeds: Int?): String? {
+    if (chartLeds == null || chartLeds < 1 || listSize == chartLeds) return null
+    val extra = listSize - chartLeds
+    return if (extra > 0) {
+        "$listSize lights in the list, $chartLeds LEDs on the chart. The last $extra will not light until you wire more chips."
+    } else {
+        "$listSize lights in the list, $chartLeds LEDs on the chart. The last ${-extra} stay unused."
+    }
 }

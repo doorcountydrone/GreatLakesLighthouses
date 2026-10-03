@@ -22,11 +22,11 @@ object PicoDiscovery {
     private const val AP_ORIGIN = "http://192.168.4.1"
 
     sealed class Result {
-        data class Found(val url: String, val message: String) : Result()
+        data class Found(val url: String, val message: String, val numLeds: Int? = null) : Result()
         data class Error(val message: String) : Result()
     }
 
-    private data class Hit(val url: String, val version: String, val setup: Boolean)
+    private data class Hit(val url: String, val version: String, val setup: Boolean, val numLeds: Int? = null)
 
     suspend fun find(context: Context, currentUrl: String): Result = withContext(Dispatchers.IO) {
         if (PicoUrls.wifiNetwork(context) == null) {
@@ -63,7 +63,7 @@ object PicoDiscovery {
         val stored = rememberWorkingPicoUrl(context, hit.url)
         val where = if (hit.setup) "GreatLakes-Setup" else "this Wi-Fi"
         val ver = if (hit.version.isNotBlank()) " v${hit.version}" else ""
-        return Result.Found(stored, "Found the chart$ver on $where: $stored")
+        return Result.Found(stored, "Found the chart$ver on $where: $stored", hit.numLeds)
     }
 
     private fun wifiIpv4(context: Context): Inet4Address? {
@@ -126,6 +126,7 @@ object PicoDiscovery {
                 url = PicoUrls.normalize(origin),
                 version = json.optString("version"),
                 setup = json.optString("mode") == "setup",
+                numLeds = json.optInt("num_leds", -1).takeIf { it >= 1 },
             )
         } catch (_: Exception) {
             null

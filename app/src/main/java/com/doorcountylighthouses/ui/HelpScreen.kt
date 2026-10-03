@@ -116,6 +116,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
             title = "Your light list",
             body = "• Chart address: tap Find chart, or Fetch / Save / Identify. The app tries the box, the last home IP it used, and 192.168.4.1. On success it fills in the working address. LED 1 is the first light on the strip.\n\n" +
                 "• Fetch from chart / Reload: loads the list that is already on the chart and replaces the list on this phone. The app does not do that when it opens.\n\n" +
+                "• If the list length and the chart’s LED count do not match, Lights shows a line: extra names will not light, or extra chips stay unused.\n\n" +
                 "• Save to chart / Save list: sends your list to the chart. Do this after you add, skip, reorder, or delete lights. The app warns if you leave Lights or Fetch again with unsaved changes.\n\n" +
                 "• Use / Skip: Skip leaves that light dark but keeps its place on the strip.\n\n" +
                 "• Tap an LED number on the Lights tab (or in the browser) to light only that LED for a few seconds. This works on GreatLakes-Setup at 192.168.4.1, so you can check wiring on a work or hotel network that the chart cannot join.\n\n" +
